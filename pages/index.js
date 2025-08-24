@@ -10,7 +10,7 @@ export default function Home() {
 
   return (
     <div className="bg-gradient-purple min-h-screen">
-      <header className="bg-white shadow p-4 flex justify-between">
+      <header className="bg-white shadow p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-primary">MaaMobile</h1>
         <input type="text" placeholder="Search..." className="border rounded px-4 py-2"/>
       </header>
