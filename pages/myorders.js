@@ -19,7 +19,12 @@ export default function MyOrders() {
       });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || "Failed");
-      setOrders(j.orders);
+      let found = j.ok ? j.orders : [];
+      if (!found.length) {
+        const cached = JSON.parse(localStorage.getItem("maa_orders") || "[]");
+        found = cached.filter(o => o.phone === phone);
+      }
+      setOrders(found);
     } catch (e) {
       setError(e.message);
     } finally {
