@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 
 const slides = [
-  { img: "/assets/mobiles.svg", caption: "Mobiles & Tablets" },
-  { img: "/assets/electronics.svg", caption: "Best of Electronics" },
-  { img: "/assets/appliances.svg", caption: "Home Appliances Offers" },
-  { img: "/assets/lpg.svg", caption: "LPG Booking & Accessories" },
+  { img: "/assets/hero-mobiles.svg", caption: "Mobiles & Tablets" },
+  { img: "/assets/hero-electronics.svg", caption: "Electronics Mega Deals" },
+  { img: "/assets/hero-appliances.svg", caption: "Home Appliances Offers" },
+  { img: "/assets/hero-lpg.svg", caption: "LPG Booking & Accessories" },
 ];
 
 export default function HeroCarousel(){
