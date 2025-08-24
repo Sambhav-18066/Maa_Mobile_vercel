@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import CartDrawer from "@/components/CartDrawer";
 import ProductCard from "@/components/ProductCard";
 import STORE_CONFIG from "@/lib/storeConfig";
+import HeroCarousel from "@/components/HeroCarousel";
 
 export default function Home(){
   const [all, setAll] = useState([]);
