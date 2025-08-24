@@ -5,6 +5,7 @@ import CartDrawer from "@/components/CartDrawer";
 import ProductCard from "@/components/ProductCard";
 import STORE_CONFIG from "@/lib/storeConfig";
 import HeroCarousel from "@/components/HeroCarousel";
+import DealsBanner from "@/components/DealsBanner";
 import ProductRow from "@/components/ProductRow";
 
 export default function Home(){
@@ -37,6 +38,7 @@ export default function Home(){
       </nav>
 
       <HeroCarousel/>
+<DealsBanner/>
 <ProductRow title='Best of Electronics' category='Electronics'/>
 <ProductRow title='Best of Home Appliances' category='Home Appliances'/>
 
