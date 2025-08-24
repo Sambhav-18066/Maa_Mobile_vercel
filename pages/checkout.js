@@ -72,7 +72,24 @@ export default function Checkout(){
       console.error("Order persistence failed", e);
     }
 
+    
+    // store order locally for success page rendering
+    try {
+      const view = {
+        id: orderId,
+        name: form.name,
+        phone: form.phone,
+        address: form.address,
+        payment: pay,
+        items: items,
+        total: subtotal,
+        placedAt: new Date().toISOString()
+      };
+      sessionStorage.setItem("maa_last_order", JSON.stringify(view));
+    } catch {}
+
     router.push(`/success?oid=${orderId}&wa=${encodeURIComponent(wa)}`);
+
 
   }
 
