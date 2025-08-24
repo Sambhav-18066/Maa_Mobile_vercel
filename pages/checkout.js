@@ -50,7 +50,7 @@ export default function Checkout(){
     if (typeof window !== "undefined") localStorage.removeItem("maa_cart_v1");
 
     
-    // try to persist to server (Vercel KV)
+    // try to persist to server (Supabase API)
     try {
       const payload = {
         id: orderId,
@@ -63,12 +63,13 @@ export default function Checkout(){
         total: subtotal,
         whatsapp: (form.whatsapp || ""),
       };
+      // Save to Supabase
       await fetch("/api/orders/create", {
         method: "POST",
         headers: { "Content-Type":"application/json" },
         body: JSON.stringify(payload)
       });
-      // Also save order to local cache
+      // Also save to local cache
       try {
         const existing = JSON.parse(localStorage.getItem("maa_orders") || "[]");
         existing.push(payload);
@@ -76,32 +77,12 @@ export default function Checkout(){
       } catch(e) {
         console.error("Local cache save failed", e);
       }
-      
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify(payload)
-      });
     } catch (e) {
       console.error("Order persistence failed", e);
     }
 
-    
-    // store order locally for success page rendering
-    try {
-      const view = {
-        id: orderId,
-        name: form.name,
-        phone: form.phone,
-        address: form.address,
-        payment: pay,
-        items: items,
-        total: subtotal,
-        placedAt: new Date().toISOString()
-      };
-      sessionStorage.setItem("maa_last_order", JSON.stringify(view));
-    } catch {}
-
     router.push(`/success?oid=${orderId}&wa=${encodeURIComponent(wa)}`);
+(`/success?oid=${orderId}&wa=${encodeURIComponent(wa)}`);
 
 
   }
