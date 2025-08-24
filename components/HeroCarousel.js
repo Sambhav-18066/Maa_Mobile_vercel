@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 
 const slides = [
-  { tag: "White · Purple · Gold", title: "Shop Mobiles", img: "/assets/mobiles.svg" },
-  { tag: "Electronics", title: "Soundbars, TVs & more", img: "/assets/electronics.svg" },
-  { tag: "Home Appliances", title: "Fridges, ACs", img: "/assets/appliances.svg" },
-  { tag: "LPG", title: "Cylinders & Accessories", img: "/assets/lpg.svg" },
+  { img: "/assets/mobiles.jpg", caption: "Mobiles & Tablets" },
+  { img: "/assets/electronics.jpg", caption: "Best Electronics Deals" },
+  { img: "/assets/appliances.jpg", caption: "Home Appliances Offers" },
+  { img: "/assets/lpg.jpg", caption: "LPG Booking & Accessories" },
 ];
 
 export default function HeroCarousel(){
@@ -15,15 +15,21 @@ export default function HeroCarousel(){
     const t = setInterval(()=> setI(p => (p+1)%slides.length), 4000);
     return ()=> clearInterval(t);
   }, []);
-  const s = slides[i];
+  const prev = ()=> setI((i-1+slides.length)%slides.length);
+  const next = ()=> setI((i+1)%slides.length);
+
   return (
-    <section className="hero">
-      <div>
-        <span className="tag">{s.tag}</span>
-        <h1>{s.title}</h1>
-        <p>Your friendly neighborhood store.</p>
+    <div style={{position:"relative", overflow:"hidden"}}>
+      <img src={slides[i].img} alt={slides[i].caption}
+           style={{width:"100%", height:"320px", objectFit:"cover"}}/>
+      <button onClick={prev} style={{position:"absolute", left:10, top:"45%", fontSize:24, background:"rgba(0,0,0,.3)", color:"#fff"}}>‹</button>
+      <button onClick={next} style={{position:"absolute", right:10, top:"45%", fontSize:24, background:"rgba(0,0,0,.3)", color:"#fff"}}>›</button>
+      <div style={{position:"absolute", bottom:10, left:"50%", transform:"translateX(-50%)", display:"flex", gap:6}}>
+        {slides.map((_,idx)=>
+          <div key={idx} onClick={()=>setI(idx)}
+               style={{width:12, height:12, borderRadius:"50%", background: idx===i ? "#fff":"#888", cursor:"pointer"}}/>
+        )}
       </div>
-      <img src={s.img} alt={s.title} style={{width:"100%", height:180, objectFit:"contain"}}/>
-    </section>
+    </div>
   );
 }

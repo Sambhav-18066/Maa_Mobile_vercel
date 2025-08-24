@@ -34,14 +34,8 @@ export default function Home(){
         ))}
       </nav>
 
-      <section className="hero">
-        <div>
-          <span className="tag">White · Purple · Gold</span>
-          <h1>Shop Mobiles, Electronics, Home Appliances & LPG</h1>
-          <p>Your friendly neighborhood store with Flipkart-style speed, minus the corporate drama.</p>
-        </div>
-        <img src="/assets/electronics.svg" alt="Hero" style={{width:"100%", height:180, objectFit:"contain"}}/>
-      </section>
+      <HeroCarousel/>
+
 
       <div className="notice">
         Free delivery within 30 km radius. Cash on Delivery available. UPI payments supported. LPG bookings accepted.

@@ -3,88 +3,70 @@
     "id": "mob-1",
     "name": "MaaPhone X2 5G (8GB, 128GB)",
     "category": "Mobiles",
-    "brand": "Maa",
     "price": 14999,
     "mrp": 19999,
     "rating": 4.4,
-    "image": "/assets/mobiles.svg",
-    "description": "6.6\" 120Hz display, 50MP camera, 5000mAh battery, dual 5G."
-  },
-  {
-    "id": "mob-2",
-    "name": "Pixel Nova Lite (6GB, 128GB)",
-    "category": "Mobiles",
-    "brand": "Pixel Nova",
-    "price": 11999,
-    "mrp": 14999,
-    "rating": 4.2,
-    "image": "/assets/mobiles.svg",
-    "description": "Smooth Android, great cameras, fast charging."
+    "image": "https://fdn2.gsmarena.com/vv/pics/samsung/samsung-galaxy-s23-1.jpg",
+    "description": "6.6'' AMOLED 120Hz display, 50MP camera, 5000mAh battery, dual 5G."
   },
   {
     "id": "elec-1",
     "name": "Bluetooth Soundbar 150W",
     "category": "Electronics",
-    "brand": "SonicX",
     "price": 4999,
     "mrp": 7999,
     "rating": 4.1,
-    "image": "/assets/electronics.svg",
+    "image": "https://m.media-amazon.com/images/I/81zP3Jqg7oL._SX679_.jpg",
     "description": "Deep bass, HDMI ARC, Dolby Audio support."
   },
   {
     "id": "elec-2",
     "name": "4K Smart TV 43\"",
     "category": "Electronics",
-    "brand": "ViewMax",
     "price": 23999,
     "mrp": 29999,
     "rating": 4.3,
-    "image": "/assets/electronics.svg",
+    "image": "https://m.media-amazon.com/images/I/81QpkIctqPL._SX679_.jpg",
     "description": "Bezel-less, HDR10, Dolby Vision, 20W speakers."
   },
   {
     "id": "home-1",
     "name": "FrostFree Double Door Fridge 265L",
     "category": "Home Appliances",
-    "brand": "ChillPro",
     "price": 22999,
     "mrp": 27999,
     "rating": 4.0,
-    "image": "/assets/appliances.svg",
+    "image": "https://m.media-amazon.com/images/I/71cQWYVtcBL._SX679_.jpg",
     "description": "Inverter compressor, 3-star energy rating."
   },
   {
     "id": "home-2",
     "name": "Inverter Split AC 1.5 Ton 5-Star",
     "category": "Home Appliances",
-    "brand": "AeroCool",
     "price": 33999,
     "mrp": 38999,
     "rating": 4.2,
-    "image": "/assets/appliances.svg",
+    "image": "https://m.media-amazon.com/images/I/61zL3XfH0lL._SX679_.jpg",
     "description": "Copper condenser, 4-way swing, silent mode."
   },
   {
     "id": "lpg-1",
-    "name": "LPG Cylinder Refill (Bharat/HP/Indane)",
+    "name": "LPG Cylinder Refill",
     "category": "LPG",
-    "brand": "LPG",
     "price": 980,
     "mrp": 980,
     "rating": 4.5,
-    "image": "/assets/lpg.svg",
+    "image": "https://m.media-amazon.com/images/I/61RYRjQyS7L._SX679_.jpg",
     "description": "Book a refill delivery within service radius."
   },
   {
     "id": "lpg-2",
     "name": "LPG Hose & Regulator Kit",
     "category": "LPG",
-    "brand": "SafeGas",
     "price": 699,
     "mrp": 999,
     "rating": 4.1,
-    "image": "/assets/lpg.svg",
+    "image": "https://m.media-amazon.com/images/I/61L84N9vmdL._SX679_.jpg",
     "description": "ISI certified safety kit for home stoves."
   }
 ]
