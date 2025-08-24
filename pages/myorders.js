@@ -1,6 +1,6 @@
-
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import OrderTimeline from "@/components/OrderTimeline";
 
 export default function MyOrders() {
   const [phone, setPhone] = useState("");
@@ -8,60 +8,64 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(()=>{
+    const p = localStorage.getItem("maa_phone") || "";
+    if(p) setPhone(p);
+  }, []);
+
   async function fetchOrders() {
     setLoading(true);
     setError("");
     try {
       const r = await fetch("/api/orders/byPhone", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type":"application/json" },
         body: JSON.stringify({ phone })
       });
       const j = await r.json();
-      if (!j.ok) throw new Error(j.error || "Failed");
-      let found = j.ok ? j.orders : [];
-      if (!found.length) {
-        const cached = JSON.parse(localStorage.getItem("maa_orders") || "[]");
-        found = cached.filter(o => o.phone === phone);
-      }
-      setOrders(found);
-    } catch (e) {
-      setError(e.message);
+      if(!j.ok) throw new Error(j.error || "Failed to fetch");
+      setOrders(j.orders || []);
+      localStorage.setItem("maa_phone", phone);
+    } catch (err) {
+      setError(String(err.message || err));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main style={{ maxWidth: 1000, margin: "20px auto", padding: "0 16px" }}>
+    <main style={{maxWidth:900, margin:"24px auto", padding:"0 16px"}}>
       <h1>My Orders</h1>
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        <input
-          value={phone}
-          onChange={e => setPhone(e.target.value)}
-          placeholder="Enter your phone number"
-          style={{ padding: 10, flex: 1, border: "1px solid #ddd", borderRadius: 8 }}
-        />
-        <button className="btn primary" onClick={fetchOrders} disabled={loading}>
-          {loading ? "Loading..." : "Find Orders"}
-        </button>
+      <div style={{display:"flex", gap:8}}>
+        <input placeholder="Enter your phone number" value={phone} onChange={e=>setPhone(e.target.value)} />
+        <button className="btn" onClick={fetchOrders} disabled={!phone || loading}>{loading ? "Loading..." : "Show"}</button>
       </div>
-      {error && <div style={{ color: "crimson" }}>{error}</div>}
+      {error && <div style={{color:"crimson", marginTop:6}}>{error}</div>}
 
-      {orders.map(o => (
-        <div key={o.id} style={{ background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: 12, marginBottom: 12 }}>
-          <div style={{ fontWeight: 800 }}>Order {o.id} — {o.status}</div>
-          <div className="small">Placed: {new Date(o.created_at).toLocaleString()}</div>
-          <div className="small">Total: ₹{o.total}</div>
-          <div style={{ marginTop: 6 }}>
-            {o.items?.map(i => (
-              <div key={i.id} className="small">- {i.name} × {i.qty}</div>
-            ))}
+      <div style={{display:"grid", gap:12, marginTop:16}}>
+        {orders.map(o => (
+          <div key={o.id} style={{border:"1px solid #eee", borderRadius:12, padding:12}}>
+            <div style={{display:"flex", justifyContent:"space-between", gap:8, flexWrap:"wrap"}}>
+              <div>
+                <div style={{fontWeight:800}}>{o.id} — {o.status}</div>
+                <div className="small">Placed: {o.created_at ? new Date(o.created_at).toLocaleString() : "-"}</div>
+                {o.eta && <div className="small">Expected delivery: {new Date(o.eta).toLocaleString()}</div>}
+                <div className="small">Total: ₹{Number(o.total||0).toLocaleString()}</div>
+              </div>
+              <div className="small">Tracking code: {o.tracking_code || "—"}</div>
+            </div>
+            <div style={{marginTop:8}}>
+              <OrderTimeline order={o} />
+            </div>
+            <div style={{ marginTop: 10 }}>
+              {o.items?.map(i => (
+                <div key={i.id} className="small">- {i.name} × {i.qty}</div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
-
-      {orders.length === 0 && !loading && <div className="small">No orders found for this number.</div>}
+        ))}
+        {orders.length === 0 && !loading && <div className="small">No orders found for this number.</div>}
+      </div>
     </main>
   );
 }

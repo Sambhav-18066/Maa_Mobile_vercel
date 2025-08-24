@@ -24,6 +24,7 @@ export default function Header({ onSearch, onOpenCart }){
           <button className="badge" onClick={onOpenCart}>
             🛒 Cart <span className="count">{count}</span>
           </button>
+          <Link className="badge" href="/myorders">My Orders</Link>
           <Link className="badge" href="/checkout">Checkout</Link>
         </div>
       </div>

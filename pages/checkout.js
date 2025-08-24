@@ -39,7 +39,7 @@ export default function Checkout(){
     return `upi://pay?pa=${encodeURIComponent(upi)}&pn=${name}&am=${encodeURIComponent(String(amount))}&cu=INR`;
   }
 
- async function onSubmit(e){
+  async async function onSubmit(e){
     e.preventDefault();
     const orderId = "MMA" + Math.floor(100000 + Math.random()*900000);
     const to = (form.whatsapp || STORE_CONFIG.ADMIN_WHATSAPP_NUMBER || "").replace(/[^0-9]/g,"");
