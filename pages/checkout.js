@@ -49,7 +49,31 @@ export default function Checkout(){
     // clear cart
     if (typeof window !== "undefined") localStorage.removeItem("maa_cart_v1");
 
+    
+    // try to persist to server (Vercel KV)
+    try {
+      const payload = {
+        id: orderId,
+        name: form.name,
+        phone: form.phone,
+        address: form.address,
+        payment: pay,
+        pay: pay,
+        items: items,
+        total: subtotal,
+        whatsapp: (form.whatsapp || ""),
+      };
+      await fetch("/api/orders/create", {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.error("Order persistence failed", e);
+    }
+
     router.push(`/success?oid=${orderId}&wa=${encodeURIComponent(wa)}`);
+
   }
 
   return (
