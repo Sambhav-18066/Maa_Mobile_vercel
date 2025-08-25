@@ -3,75 +3,62 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import ProductCard from "../components/ProductCard";
 
-// --- tiny utilities ---
+// utils
 function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
 function autoAdvance(fn, ms){ let t; const start=()=>t=setInterval(fn, ms); const stop=()=>{ if(t) clearInterval(t); }; return { start, stop }; }
 
 export default function Home(){
-  // products
+  // load products
   const [all, setAll] = useState([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(()=>{
-    let mounted = true;
-    fetch("/products.json")
-      .then(r=>r.json())
-      .then(d=>{ if(mounted){ setAll(Array.isArray(d)?d:[]); setLoading(false); } })
-      .catch(()=> setLoading(false));
-    return ()=>{ mounted=false; };
+    let on = true;
+    fetch("/products.json").then(r=>r.json()).then(d=>{ if(on){ setAll(Array.isArray(d)?d:[]); setLoading(false); } }).catch(()=>setLoading(false));
+    return ()=>{ on=false; }
   }, []);
 
-  // --- HERO CAROUSEL ---
-  // Replace the URLs below with your real images if you like
+  // hero (4 slides; safe fallback)
   const hero = useMemo(()=>[
     { src: "/assets/hero-1.jpg", alt: "Latest smartphones" },
     { src: "/assets/hero-2.jpg", alt: "Accessories deals" },
     { src: "/assets/hero-3.jpg", alt: "Home appliances" },
-    { src: "/assets/hero-4.jpg", alt: "Electronics & more" } // <= the 4th one people said was missing
+    { src: "/assets/hero-4.jpg", alt: "Electronics & more" } // this is the historically-missing slide
   ],[]);
   const [idx, setIdx] = useState(0);
   const totalSlides = hero.length;
-
-  // auto-rotate every 4s, pause on hover/touch
   const rotator = useRef(null);
   useEffect(()=>{
     rotator.current = autoAdvance(()=> setIdx(i => (i+1)%totalSlides), 4000);
     rotator.current.start();
     return rotator.current.stop;
   }, [totalSlides]);
+  const go = (i)=> setIdx(clamp(i,0,totalSlides-1));
+  const prev = ()=> setIdx(i => (i-1+totalSlides)%totalSlides);
+  const next = ()=> setIdx(i => (i+1)%totalSlides);
 
-  function go(i){ setIdx(clamp(i,0,totalSlides-1)); }
-  function prev(){ setIdx(i => (i-1+totalSlides)%totalSlides); }
-  function next(){ setIdx(i => (i+1)%totalSlides); }
-
-  // --- quick derived product lists ---
+  // derived product sets
   const featured = useMemo(()=> all.slice(0, 8), [all]);
-  const mobiles = useMemo(()=> all.filter(p => (p.category||"").toLowerCase().includes("mobile")).slice(0,8), [all]);
+  const mobiles  = useMemo(()=> all.filter(p => (p.category||"").toLowerCase().includes("mobile")).slice(0,8), [all]);
 
-  // --- search bar state ---
+  // search
   const [q, setQ] = useState("");
-  function submitSearch(e){
-    e.preventDefault();
-    const term = q.trim();
-    if(!term) return;
-    window.location.href = "/search?q=" + encodeURIComponent(term);
-  }
+  const submitSearch = (e)=>{ e.preventDefault(); const term=q.trim(); if(term){ window.location.href="/search?q="+encodeURIComponent(term); } };
 
   return (
     <main className="page" style={{maxWidth:1120, margin:"0 auto", padding:"0 16px"}}>
       {/* HEADER */}
       <header className="header" style={{padding:"10px 0"}}>
-        <div className="bar">
+        <div className="bar" style={{display:"grid", gridTemplateColumns:"auto 1fr auto", alignItems:"center", gap:12}}>
           <Link className="logo" href="/" style={{display:"flex", alignItems:"center", gap:10, textDecoration:"none"}}>
             <img src="/assets/logo.svg" alt="logo" width="36" height="36" />
             <div className="title">Maa Mobile</div>
           </Link>
 
-          {/* Search */}
+          {/* search */}
           <form onSubmit={submitSearch} style={{display:"flex", gap:8, justifySelf:"center"}}>
             <input
               value={q}
-              onChange={e=>setQ(e.target.value)}
+              onChange={(e)=>setQ(e.target.value)}
               placeholder="Search phones, accessories, LPG, appliances…"
               aria-label="Search"
               style={{minWidth:320}}
@@ -85,8 +72,8 @@ export default function Home(){
         </div>
       </header>
 
-      {/* SUB-CATEGORY CHIPS (place above hero) */}
-      <nav className="categories" style={{marginTop:6}}>
+      {/* SUB-CATEGORIES — ON HOME SCREEN (full width, above hero) */}
+      <section aria-label="Quick categories" style={{marginTop:6}}>
         <div className="subcats">
           <div className="subcat">
             <div className="title">Mobile Phone</div>
@@ -155,9 +142,9 @@ export default function Home(){
             </div>
           </div>
         </div>
-      </nav>
+      </section>
 
-      {/* HERO CAROUSEL */}
+      {/* HERO */}
       <section className="section" style={{marginTop:10}}>
         <div
           onMouseEnter={()=>rotator.current?.stop()}
@@ -188,22 +175,14 @@ export default function Home(){
             ))}
           </div>
 
-          {/* controls */}
           <button className="btn" aria-label="Previous" onClick={prev}
                   style={{position:"absolute", left:10, top:"50%", transform:"translateY(-50%)"}}>‹</button>
           <button className="btn" aria-label="Next" onClick={next}
                   style={{position:"absolute", right:10, top:"50%", transform:"translateY(-50%)"}}>›</button>
 
-          {/* dots */}
           <div style={{position:"absolute", bottom:10, left:0, right:0, display:"flex", justifyContent:"center", gap:6}}>
             {hero.map((_,i)=>(
-              <button
-                key={i}
-                onClick={()=>go(i)}
-                aria-label={`Go to slide ${i+1}`}
-                className="badge"
-                style={{opacity: i===idx?1:.5}}
-              >
+              <button key={i} onClick={()=>go(i)} aria-label={`Go to slide ${i+1}`} className="badge" style={{opacity: i===idx?1:.5}}>
                 {i+1}
               </button>
             ))}
@@ -211,7 +190,7 @@ export default function Home(){
         </div>
       </section>
 
-      {/* FEATURED PRODUCTS */}
+      {/* FEATURED */}
       <section className="section" style={{marginTop:16}}>
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
           <h2 style={{margin:0}}>Featured</h2>
@@ -227,7 +206,7 @@ export default function Home(){
         </div>
       </section>
 
-      {/* MOBILES ROW */}
+      {/* MOBILES */}
       <section className="section" style={{marginTop:16, marginBottom:24}}>
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
           <h2 style={{margin:0}}>Mobiles</h2>
