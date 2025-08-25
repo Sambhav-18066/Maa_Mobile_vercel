@@ -12,8 +12,6 @@ function etaString(){
   return d.toLocaleDateString(undefined, opts);
 }
 
-import { useRouter } from "next/router";
-import Link from "next/link";
 import STORE_CONFIG from "@/lib/storeConfig";
 
 export default function Success(){
@@ -21,7 +19,6 @@ export default function Success(){
   const id = router?.query?.id;
   const to = (STORE_CONFIG.ADMIN_WHATSAPP_NUMBER || '').replace(/[^0-9]/g,'');
   const msg = encodeURIComponent(`Order ${id||''} placed from ${STORE_CONFIG.NAME||'Maa Mobile'}`);
-  const wa = `https://wa.me/${to}?text=${msg}`;
 
   const { query } = useRouter();
   const [oid, setOid] = useState("");
