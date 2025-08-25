@@ -16,7 +16,8 @@ export default function ProductPage(){
     if(query.id && all.length){ setP(all.find(x=>x.id===query.id)); }
   }, [query.id, all]);
 
-  if(!p) return <main style={{maxWidth:1000,margin:"20px auto",padding:"0 16px"}}>Loading…</main>;
+  if(!p) return <main style={{maxWidth:1000,margin:"20px auto",padding:"0 16px"}}>Loading…</main>
+      <StickyCheckoutBar/>;
 
   return (
     <main style={{maxWidth:1000, margin:"20px auto", padding:"0 16px"}}>
@@ -43,5 +44,6 @@ export default function ProductPage(){
         </div>
       </div>
     </main>
+      <StickyCheckoutBar/>
   );
 }

@@ -64,16 +64,19 @@ export default function Checkout(){
         whatsapp: (form.whatsapp || ""),
       };
       // Save to Supabase
-      await fetch("/api/orders/create", {
+      const r = await fetch("/api/orders/create", {
         method: "POST",
         headers: { "Content-Type":"application/json" },
         body: JSON.stringify(payload)
       });
+      const j = await r.json();
+      const newId = j?.id || orderId;
       // Also save to local cache
       try {
         const existing = JSON.parse(localStorage.getItem("maa_orders") || "[]");
         existing.push(payload);
         localStorage.setItem("maa_orders", JSON.stringify(existing));
+        router.push(`/success?id=${newId}`);
       } catch(e) {
         console.error("Local cache save failed", e);
       }
@@ -110,7 +113,7 @@ export default function Checkout(){
             </div>
             <div style={{display:"grid", gap:6}}>
               <label>Phone</label>
-              <input required pattern="\d{10,12}" value={form.phone} onChange={e=>update("phone", e.target.value)} placeholder="10-digit phone" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+              <input type="tel" inputMode="numeric" pattern="[0-9]*" required pattern="\d{10,12}" value={form.phone} onChange={e=>update("phone", e.target.value)} placeholder="10-digit phone" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
             </div>
             <div style={{display:"grid", gap:6}}>
               <label>Address</label>
@@ -139,7 +142,7 @@ export default function Checkout(){
 
             <div style={{display:"grid", gap:6}}>
               <label>Send order to shop WhatsApp (optional)</label>
-              <input value={form.whatsapp} onChange={e=>update("whatsapp", e.target.value)} placeholder="Owner WhatsApp (e.g., 9198XXXXXXXX)" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+              <input type="tel" inputMode="numeric" pattern="[0-9]*" type="tel" inputMode="numeric" pattern="[0-9]*" value={form.whatsapp} onChange={e=>update("whatsapp", e.target.value)} placeholder="Owner WhatsApp (e.g., 9198XXXXXXXX)" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
               <p className="small">If empty, we use the number in the config.</p>
             </div>
 

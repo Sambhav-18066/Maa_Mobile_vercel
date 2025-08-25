@@ -12,7 +12,17 @@ function etaString(){
   return d.toLocaleDateString(undefined, opts);
 }
 
+import { useRouter } from "next/router";
+import Link from "next/link";
+import STORE_CONFIG from "@/lib/storeConfig";
+
 export default function Success(){
+  const router = useRouter();
+  const id = router?.query?.id;
+  const to = (STORE_CONFIG.ADMIN_WHATSAPP_NUMBER || '').replace(/[^0-9]/g,'');
+  const msg = encodeURIComponent(`Order ${id||''} placed from ${STORE_CONFIG.NAME||'Maa Mobile'}`);
+  const wa = `https://wa.me/${to}?text=${msg}`;
+
   const { query } = useRouter();
   const [oid, setOid] = useState("");
   const [wa, setWa] = useState("");
@@ -108,6 +118,11 @@ export default function Success(){
       <section>
         <ProductRow title="You May Also Like..." category="Mobiles" />
       </section>
+    
+      <div style={{marginTop:16, display:"flex", gap:8, flexWrap:"wrap"}}>
+        <Link className="btn primary" href="/myorders">Track my order</Link>
+        <a className="btn" href={wa} target="_blank" rel="noreferrer">WhatsApp the shop</a>
+      </div>
     </main>
   );
 }
