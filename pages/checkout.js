@@ -5,87 +5,117 @@ import STORE_CONFIG from "@/lib/storeConfig";
 import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/router";
 
+function upiDeepLink(amount){
+  const upi = encodeURIComponent(`${STORE_CONFIG.UPI_ID}`);
+  const name = encodeURIComponent(`${STORE_CONFIG.UPI_NAME}`);
+  return `upi://pay?pa=${upi}&pn=${name}&cu=INR&am=${amount}`;
+}
+
 export default function Checkout(){
-  const { items } = useCart();
+  const { items, clear } = useCart();
   const router = useRouter();
+
+  const [step, setStep] = useState(1);
   const [pay, setPay] = useState("COD");
   const subtotal = useMemo(()=> items.reduce((s,i)=>s+i.qty*i.price,0), [items]);
   const count = useMemo(()=> items.reduce((n,i)=>n+i.qty,0), [items]);
 
-  const [form, setForm] = useState({name:"", phone:"", address:"", whatsapp:""});
+  const [form, setForm] = useState({ name:"", phone:"", address:"", nickname:"Home", whatsapp:"" });
+  const [more, setMore] = useState(false);
+  const [placing, setPlacing] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(()=>{
+    // smart defaults
+    const lastPhone = localStorage.getItem("maa_phone") || "";
+    const lastPay   = localStorage.getItem("maa_pay") || "COD";
+    const lastNick  = localStorage.getItem("maa_address_nick") || "Home";
+    setForm(f => ({...f, phone: lastPhone}));
+    setPay(lastPay);
+    setForm(f => ({...f, nickname: lastNick}));
+  }, []);
+
+  useEffect(()=>{ localStorage.setItem("maa_pay", pay); }, [pay]);
 
   function update(k,v){ setForm(prev => ({...prev, [k]: v})); }
 
-  function buildOrderText(orderId){
-    const lines = [];
-    lines.push(`Order ID: ${orderId}`);
-    lines.push(`Name: ${form.name}`);
-    lines.push(`Phone: ${form.phone}`);
-    lines.push(`Address: ${form.address}`);
-    lines.push(`Payment: ${pay}`);
-    lines.push("");
-    lines.push("Items:");
-    for(const i of items){ lines.push(`- ${i.name} x ${i.qty} = ₹${(i.qty*i.price).toLocaleString()}`); }
-    lines.push("");
-    lines.push(`Total: ₹${subtotal.toLocaleString()}`);
-    lines.push("");
-    lines.push("— Sent from Maa Mobile store");
-    return lines.join("\n");
-  }
-
-  function upiDeepLink(amount){
-    const upi = STORE_CONFIG.UPI_ID;
-    const name = encodeURIComponent(STORE_CONFIG.UPI_NAME || "Maa Mobile");
-    return `upi://pay?pa=${encodeURIComponent(upi)}&pn=${name}&am=${encodeURIComponent(String(amount))}&cu=INR`;
-  }
+  const disabled = placing || count === 0 || !/^\d{10,12}$/.test(form.phone) || form.address.trim().length < 8;
 
   async function onSubmit(e){
     e.preventDefault();
-    const orderId = "MMA" + Math.floor(100000 + Math.random()*900000);
-    const to = (form.whatsapp || STORE_CONFIG.ADMIN_WHATSAPP_NUMBER || "").replace(/[^0-9]/g,"");
-    const details = buildOrderText(orderId);
-    const wa = to ? `https://wa.me/${to}?text=${encodeURIComponent(details)}` : `https://wa.me/?text=${encodeURIComponent(details)}`;
+    setError("");
+    if (disabled) return;
 
-    // clear cart
-    if (typeof window !== "undefined") localStorage.removeItem("maa_cart_v1");
+    setPlacing(true);
 
-    
-    // try to persist to server (Supabase API)
-    try {
-      const payload = {
-        id: orderId,
-        name: form.name,
-        phone: form.phone,
-        address: form.address,
-        payment: pay,
-        pay: pay,
-        items: items,
-        total: subtotal,
-        whatsapp: (form.whatsapp || ""),
-      };
-      // Save to Supabase
-      await fetch("/api/orders/create", {
+    const order = {
+      id: `MMA${Date.now()}`,
+      name: form.name || "Customer",
+      phone: form.phone,
+      address: form.address + (form.nickname ? ` (${form.nickname})` : ""),
+      payment: pay,
+      items,
+      total: subtotal,
+      created_at: new Date().toISOString(),
+      status: "PLACED",
+      status_timestamps: { PLACED: new Date().toISOString() }
+    };
+
+    async function sendOrder(o){
+      const res = await fetch("/api/orders/create", {
         method: "POST",
         headers: { "Content-Type":"application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(o)
       });
-      // Also save to local cache
-      try {
-        const existing = JSON.parse(localStorage.getItem("maa_orders") || "[]");
-        existing.push(payload);
-        localStorage.setItem("maa_orders", JSON.stringify(existing));
-      } catch(e) {
-        console.error("Local cache save failed", e);
-      }
-    } catch (e) {
-      console.error("Order persistence failed", e);
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
     }
 
-    router.push(`/success?oid=${orderId}&wa=${encodeURIComponent(wa)}`);
-(`/success?oid=${orderId}&wa=${encodeURIComponent(wa)}`);
+    try {
+      // online path
+      const out = await sendOrder(order);
+      localStorage.setItem("maa_phone", order.phone);
+      localStorage.setItem("maa_address_nick", form.nickname||"Home");
 
+      // optional: WhatsApp to shop number
+      if (form.whatsapp) {
+        // nothing to do now; success page offers button
+      }
 
+      clear();
+      router.push(`/success?id=${order.id}`);
+    } catch (err) {
+      // offline queue path
+      const q = JSON.parse(localStorage.getItem("maa_offline_queue") || "[]");
+      q.push(order);
+      localStorage.setItem("maa_offline_queue", JSON.stringify(q));
+      setError("You're offline. We'll queue this order and send it when you're back online.");
+      // small delay to show message then go to success UI
+      clear();
+      setTimeout(()=> router.push(`/success?id=${order.id}&offline=1`), 900);
+    } finally {
+      setPlacing(false);
+    }
   }
+
+  // flush queue when back online
+  useEffect(()=>{
+    async function flush(){
+      const q = JSON.parse(localStorage.getItem("maa_offline_queue") || "[]");
+      if (!q.length) return;
+      const next = [];
+      for (const o of q){
+        try {
+          await fetch("/api/orders/create",{ method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(o) });
+        } catch (e) { next.push(o); }
+      }
+      localStorage.setItem("maa_offline_queue", JSON.stringify(next));
+    }
+    window.addEventListener("online", flush);
+    return ()=> window.removeEventListener("online", flush);
+  }, []);
+
+  const progressPct = step===1 ? 33 : step===2 ? 66 : 100;
 
   return (
     <>
@@ -102,63 +132,116 @@ export default function Checkout(){
 
       <main style={{maxWidth:1000, margin:"16px auto", padding:"0 16px", display:"grid", gridTemplateColumns:"1fr 360px", gap:16, alignItems:"start"}}>
         <section style={{background:"#fff", border:"1px solid #eee", borderRadius:14, padding:14}}>
-          <h2>Delivery Details</h2>
-          <form onSubmit={onSubmit} style={{display:"grid", gap:10}}>
-            <div style={{display:"grid", gap:6}}>
-              <label>Full Name</label>
-              <input required value={form.name} onChange={e=>update("name", e.target.value)} placeholder="Your name" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
-            </div>
-            <div style={{display:"grid", gap:6}}>
-              <label>Phone</label>
-              <input required pattern="\d{10,12}" value={form.phone} onChange={e=>update("phone", e.target.value)} placeholder="10-digit phone" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
-            </div>
-            <div style={{display:"grid", gap:6}}>
-              <label>Address</label>
-              <textarea required rows={3} value={form.address} onChange={e=>update("address", e.target.value)} placeholder="House, street, landmark, city, PIN" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
-            </div>
+          <div className="progressHeader" aria-label={`Checkout progress ${step}/3`}>
+            <span style={{fontWeight:800}}>Step {step}/3</span>
+            <div className="progressDots"><div className="progressFill" style={{width:`${progressPct}%`}}/></div>
+          </div>
 
-            <div style={{display:"grid", gap:6}}>
-              <label>Payment Method</label>
-              <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
-                <label className="badge"><input type="radio" name="pay" value="COD" checked={pay==="COD"} onChange={()=>setPay("COD")}/> &nbsp;Cash on Delivery</label>
-                <label className="badge"><input type="radio" name="pay" value="UPI" checked={pay==="UPI"} onChange={()=>setPay("UPI")}/> &nbsp;UPI</label>
-              </div>
-            </div>
+          <form onSubmit={onSubmit} style={{display:"grid", gap:12}}>
+            {step===1 && (
+              <div>
+                <label htmlFor="phone">Phone</label>
+                <input id="phone" type="tel" inputMode="numeric" pattern="\\d{10,12}" required
+                  value={form.phone} onChange={e=>update("phone", e.target.value.replace(/\\D/g,''))}
+                  placeholder="10-digit mobile number"
+                  aria-describedby="phoneHelp"
+                  style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+                <div id="phoneHelp" className="small">We'll text you if the ETA changes.</div>
 
-            {pay==="UPI" && (
-              <div style={{border:"1px dashed #e7e3ff", borderRadius:12, padding:12}}>
-                <h3>Pay via UPI</h3>
-                <p className="small">Scan code or tap the button to open your UPI app.</p>
-                <img src="/assets/upi-qr.svg" alt="UPI QR" style={{width:180,height:180,objectFit:"contain",background:"#fff",border:"1px solid #eee",borderRadius:8}}/>
-                <div style={{marginTop:8}}>
-                  <div><strong>UPI:</strong> {STORE_CONFIG.UPI_ID} ({STORE_CONFIG.UPI_NAME})</div>
-                  <a className="btn primary" href={upiDeepLink(subtotal)}>Pay now</a>
+                <div style={{marginTop:12, display:"flex", gap:8}}>
+                  <button type="button" className="btn" onClick={()=>setStep(2)} disabled={!/^\d{10,12}$/.test(form.phone)}>Next →</button>
                 </div>
               </div>
             )}
 
-            <div style={{display:"grid", gap:6}}>
-              <label>Send order to shop WhatsApp (optional)</label>
-              <input value={form.whatsapp} onChange={e=>update("whatsapp", e.target.value)} placeholder="Owner WhatsApp (e.g., 9198XXXXXXXX)" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
-              <p className="small">If empty, we use the number in the config.</p>
-            </div>
+            {step===2 && (
+              <div>
+                <label htmlFor="address">Address</label>
+                <textarea id="address" required rows={3} value={form.address} onChange={e=>update("address", e.target.value)}
+                  placeholder="House/Flat, Street, Area, City, Pincode"
+                  aria-describedby="addrHelp"
+                  style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+                <div id="addrHelp" className="small">Landmark helps delivery find you.</div>
 
-            <button className="btn primary" type="submit">Place Order</button>
+                <div style={{display:"grid", gap:6, gridTemplateColumns:"1fr 1fr"}}>
+                  <div>
+                    <label htmlFor="nick">Address nickname</label>
+                    <select id="nick" value={form.nickname} onChange={e=>update("nickname",e.target.value)}>
+                      <option>Home</option>
+                      <option>Office</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="name">Name (optional)</label>
+                    <input id="name" value={form.name} onChange={e=>update("name", e.target.value)}
+                      placeholder="Name on order" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+                  </div>
+                </div>
+
+                <div style={{marginTop:12, display:"flex", gap:8}}>
+                  <button type="button" className="btn" onClick={()=>setStep(1)}>← Back</button>
+                  <button type="button" className="btn" onClick={()=>setStep(3)} disabled={form.address.trim().length < 8}>Next →</button>
+                </div>
+              </div>
+            )}
+
+            {step===3 && (
+              <div>
+                <div style={{display:"grid", gap:8}}>
+                  <div>
+                    <label>Payment</label>
+                    <div style={{display:"grid", gap:6}}>
+                      <label className="badge"><input type="radio" name="pay" value="COD" checked={pay==="COD"} onChange={()=>setPay("COD")}/> &nbsp;Cash on Delivery</label>
+                      <details>
+                        <summary className="badge">More options</summary>
+                        <label className="badge"><input type="radio" name="pay" value="UPI" checked={pay==="UPI"} onChange={()=>setPay("UPI")}/> &nbsp;UPI</label>
+                        {pay==="UPI" && (
+                          <div style={{padding:10, border:"1px dashed #ddd", borderRadius:10}}>
+                            <img src="/assets/upi-qr.svg" alt="UPI QR" width="160" height="160" style={{objectFit:"contain",background:"#fff",border:"1px solid #eee",borderRadius:8}}/>
+                            <div className="small" style={{marginTop:6}}><strong>UPI:</strong> {STORE_CONFIG.UPI_ID} ({STORE_CONFIG.UPI_NAME})</div>
+                            <a className="btn primary" href={upiDeepLink(subtotal)}>Pay now</a>
+                          </div>
+                        )}
+                      </details>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="wa">Send order to shop WhatsApp (optional)</label>
+                    <input id="wa" value={form.whatsapp} onChange={e=>update("whatsapp", e.target.value)}
+                      placeholder="Shop WhatsApp number (auto if empty)"
+                      style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+                    <p className="small">If empty, we use the number in the config.</p>
+                  </div>
+                </div>
+
+                {error && <div className="small" style={{color:"#b00020", fontWeight:700}}>{error}</div>}
+
+                <div style={{display:"grid", gap:8, gridTemplateColumns:"1fr 1fr"}}>
+                  <button type="button" className="btn" onClick={()=>setStep(2)}>← Back</button>
+                  <button className="btn primary" type="submit" disabled={disabled}>
+                    {placing ? "Placing..." : pay==="COD" ? "Confirm COD" : "Confirm"}
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
         </section>
 
+        {/* Cart summary */}
         <aside style={{background:"#fff", border:"1px solid #eee", borderRadius:14, padding:14}}>
-          <h3>Order Summary</h3>
-          <div className="cartItems" style={{maxHeight:340}}>
-            {items.length===0 ? <div className="small">Your cart is empty.</div> :
-              items.map(i => (
-                <div className="cartItem" key={i.id}>
-                  <img src={i.image} alt={i.name} width={64} height={64}/>
-                  <div><div className="name">{i.name}</div><div className="small">Qty: {i.qty}</div></div>
-                  <div><strong>₹{(i.qty*i.price).toLocaleString()}</strong></div>
-                </div>
-              ))
-            }
+          <h3>Summary</h3>
+          <div className="small" style={{color:"#374151"}}>No scavenger hunts: primary actions here and bottom.</div>
+          <div style={{display:"grid", gap:8, marginTop:8}}>
+            {items.length===0 && <div className="small">Your cart is empty.</div>}
+            {items.map(i => (
+              <div key={i.id} style={{display:"grid", gridTemplateColumns:"64px 1fr auto", gap:10, alignItems:"center"}}>
+                <img src={i.image} alt={i.name} width={64} height={64} loading="lazy"/>
+                <div><div className="name">{i.name}</div><div className="small">Qty: {i.qty}</div></div>
+                <div><strong>₹{(i.qty*i.price).toLocaleString()}</strong></div>
+              </div>
+            ))}
           </div>
           <div className="cartTotal">
             <div className="cartRow"><span>Items</span><span>{count}</span></div>
