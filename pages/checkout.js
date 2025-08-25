@@ -48,27 +48,39 @@ export default function Checkout(){
 
     setPlacing(true);
 
-    const order = {
-      id: `MMA${Date.now()}`,
-      name: form.name || "Customer",
-      phone: form.phone,
-      address: form.address + (form.nickname ? ` (${form.nickname})` : ""),
-      payment: pay,
-      items,
-      total: subtotal,
-      created_at: new Date().toISOString(),
-      status: "PLACED",
-      status_timestamps: { PLACED: new Date().toISOString() }
-    };
-
-    async function sendOrder(o){
-      const res = await fetch("/api/orders/create", {
+    
+    // try to persist to server (Supabase API)
+    try {
+      const payload = {
+        id: orderId,
+        name: form.name,
+        phone: form.phone,
+        address: form.address,
+        payment: pay,
+        pay: pay,
+        items: items,
+        total: subtotal,
+        whatsapp: (form.whatsapp || ""),
+      };
+      // Save to Supabase
+      const r = await fetch("/api/orders/create", {
         method: "POST",
         headers: { "Content-Type":"application/json" },
         body: JSON.stringify(o)
       });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
+      const j = await r.json();
+      const newId = j?.id || orderId;
+      // Also save to local cache
+      try {
+        const existing = JSON.parse(localStorage.getItem("maa_orders") || "[]");
+        existing.push(payload);
+        localStorage.setItem("maa_orders", JSON.stringify(existing));
+        router.push(`/success?id=${newId}`);
+      } catch(e) {
+        console.error("Local cache save failed", e);
+      }
+    } catch (e) {
+      console.error("Order persistence failed", e);
     }
 
     try {
@@ -132,10 +144,20 @@ export default function Checkout(){
 
       <main style={{maxWidth:1000, margin:"16px auto", padding:"0 16px", display:"grid", gridTemplateColumns:"1fr 360px", gap:16, alignItems:"start"}}>
         <section style={{background:"#fff", border:"1px solid #eee", borderRadius:14, padding:14}}>
-          <div className="progressHeader" aria-label={`Checkout progress ${step}/3`}>
-            <span style={{fontWeight:800}}>Step {step}/3</span>
-            <div className="progressDots"><div className="progressFill" style={{width:`${progressPct}%`}}/></div>
-          </div>
+          <h2>Delivery Details</h2>
+          <form onSubmit={onSubmit} style={{display:"grid", gap:10}}>
+            <div style={{display:"grid", gap:6}}>
+              <label>Full Name</label>
+              <input required value={form.name} onChange={e=>update("name", e.target.value)} placeholder="Your name" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+            </div>
+            <div style={{display:"grid", gap:6}}>
+              <label>Phone</label>
+              <input type="tel" inputMode="numeric" pattern="[0-9]*" required pattern="\d{10,12}" value={form.phone} onChange={e=>update("phone", e.target.value)} placeholder="10-digit phone" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+            </div>
+            <div style={{display:"grid", gap:6}}>
+              <label>Address</label>
+              <textarea required rows={3} value={form.address} onChange={e=>update("address", e.target.value)} placeholder="House, street, landmark, city, PIN" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+            </div>
 
           <form onSubmit={onSubmit} style={{display:"grid", gap:12}}>
             {step===1 && (
@@ -154,14 +176,11 @@ export default function Checkout(){
               </div>
             )}
 
-            {step===2 && (
-              <div>
-                <label htmlFor="address">Address</label>
-                <textarea id="address" required rows={3} value={form.address} onChange={e=>update("address", e.target.value)}
-                  placeholder="House/Flat, Street, Area, City, Pincode"
-                  aria-describedby="addrHelp"
-                  style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
-                <div id="addrHelp" className="small">Landmark helps delivery find you.</div>
+            <div style={{display:"grid", gap:6}}>
+              <label>Send order to shop WhatsApp (optional)</label>
+              <input type="tel" inputMode="numeric" pattern="[0-9]*" type="tel" inputMode="numeric" pattern="[0-9]*" value={form.whatsapp} onChange={e=>update("whatsapp", e.target.value)} placeholder="Owner WhatsApp (e.g., 9198XXXXXXXX)" style={{padding:10,border:"1px solid #ddd",borderRadius:10}}/>
+              <p className="small">If empty, we use the number in the config.</p>
+            </div>
 
                 <div style={{display:"grid", gap:6, gridTemplateColumns:"1fr 1fr"}}>
                   <div>

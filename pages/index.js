@@ -8,6 +8,9 @@ import HeroCarousel from "@/components/HeroCarousel";
 import DealsBanner from "@/components/DealsBanner";
 import ProductRow from "@/components/ProductRow";
 
+import StickyCheckoutBar from "@/components/StickyCheckoutBar";
+import LatestOrderCard from "@/components/LatestOrderCard";
+
 export default function Home(){
   const [all, setAll] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +56,7 @@ export default function Home(){
         {list.map(p => (<ProductCard key={p.id} p={p} />))}
         {list.length===0 && <div className="small">No items match your search.</div>}
       </main>
+      <StickyCheckoutBar/>
 
       <footer className="footer small">
         <span>© {new Date().getFullYear()} Maa Mobile</span>
