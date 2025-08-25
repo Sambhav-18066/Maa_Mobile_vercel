@@ -1,12 +1,15 @@
-export async function getServerSideProps(){ return { props: {} }; }
+// Server-side so Next won't try to pre-render this page at build time
+export async function getServerSideProps(){ 
+  return { props: {} }; 
+}
 
-"use client";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 
 function etaString(){
-  const d = new Date(); d.setDate(d.getDate() + 3);
+  const d = new Date(); 
+  d.setDate(d.getDate() + 3);
   const opts = { weekday: "short", month: "short", day: "numeric" };
   return d.toLocaleDateString(undefined, opts);
 }
@@ -20,9 +23,13 @@ export default function Success(){
   useEffect(()=>{
     const id = router.query.id;
     if (!id) return;
+
+    // read items snapshot stored during checkout/buy now
     const last = JSON.parse(localStorage.getItem("maa_last_items") || "[]");
     setOrder({ id, items: last });
     setItems(last);
+
+    // default WhatsApp number if none saved
     const num = (localStorage.getItem("maa_phone") || "8908884402").replace(/[^0-9]/g,"");
     const text = encodeURIComponent(`Hi! I placed order ${id}. Could you confirm?`);
     setWa(num ? `https://wa.me/${num}?text=${text}` : `https://wa.me/?text=${text}`);
