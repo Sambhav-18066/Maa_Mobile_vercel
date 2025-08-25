@@ -91,4 +91,4 @@ export default function Success(){
 }
 
 
-export default dynamic(() => Promise.resolve(Success), { ssr: false });
+/* export default dynamic(() => Promise.resolve(Success), { ssr: false }); */
