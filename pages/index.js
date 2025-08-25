@@ -1,3 +1,9 @@
+
+// Stop static prerender of "/"; render at request time instead.
+export async function getServerSideProps() {
+  return { props: {} };
+}
+
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Header from "@/components/Header";
