@@ -100,11 +100,45 @@ section.hero, .notice, .grid, .nav, .footer { max-width: 1200px; }
 .card button { cursor: pointer; }
 
 
-/* Depth effect buttons */
-.btn { box-shadow: 0 2px 0 rgba(0,0,0,.1); transition: transform .05s ease, box-shadow .1s ease; }
-.btn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,.2); }
+/* --- Sticky Checkout Bar --- */
+.stickyCheckoutBar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  background: rgba(255,255,255,.96); border-top: 1px solid #e5e7eb; backdrop-filter: blur(8px);
+}
+.stickyCheckoutContent { max-width: 1200px; margin: 0 auto; padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.stickyCheckoutText { display: flex; align-items: baseline; gap: 12px; font-weight: 800; }
+.stickyCheckoutText .count { font-size: 14px; color: #374151; }
+.stickyCheckoutText .total { font-size: 18px; }
 
-.categories { max-width: 1200px; margin: 12px auto 0; padding: 0 16px; }
-.catRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-.cat { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 10px; }
-.cat .small { color: #374151; }
+/* --- Tap targets / accessibility --- */
+.btn, .badge {
+  min-height: 44px;
+  min-width: 44px;
+}
+button, input, select { font-size: 16px; } /* prevent iOS zoom */
+label { display:block; font-weight:700; margin-bottom:4px; }
+input[type="tel"], textarea { width: 100%; }
+
+/* --- Skeletons --- */
+.skeleton {
+  position: relative; overflow: hidden;
+  background: #eee; border-radius: 10px; min-height: 16px;
+}
+.skeleton::after {
+  content:""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.6) 50%, rgba(255,255,255,0) 100%);
+  transform: translateX(-100%);
+  animation: shimmer 1.2s infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
+/* --- High contrast buttons --- */
+.btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn.primary:focus-visible, .btn:focus-visible { outline: 3px solid #111827; outline-offset:2px; }
+.btn.big { padding: 12px 18px; border-radius: 12px; font-size: 16px; }
+
+/* --- Progress header --- */
+.progressHeader { display:flex; align-items:center; gap:8px; margin: 4px 0 12px; }
+.progressDots { flex:1; height: 6px; background: #eee; border-radius: 999px; overflow: hidden; }
+.progressFill { height: 100%; background: var(--primary); width: 0%; transition: width .2s ease; }
