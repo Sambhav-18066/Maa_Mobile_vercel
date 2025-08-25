@@ -1,6 +1,5 @@
-
 import { useEffect } from "react";
-import "@/styles/globals.css";
++ import "../styles/globals.css";
 
 function mmSend(type, meta){
   try{
