@@ -16,9 +16,9 @@ export default function ProductPage(){
     if(query.id && all.length){ setP(all.find(x=>x.id===query.id)); }
   }, [query.id, all]);
 
-  if(!p) return (<><main style={{maxWidth:1000,margin:"20px auto",padding:"0 16px"}}>Loading…</main><StickyCheckoutBar/></>);
+  if(!p) return <main style={{maxWidth:1000,margin:"20px auto",padding:"0 16px"}}>Loading…</main>;
 
-  return (<>
+  return (
     <main style={{maxWidth:1000, margin:"20px auto", padding:"0 16px"}}>
       <nav style={{marginBottom:10}}><Link href="/">← Back to Home</Link></nav>
       <div style={{display:"grid", gridTemplateColumns:"420px 1fr", gap:20, alignItems:"start"}}>
@@ -43,6 +43,5 @@ export default function ProductPage(){
         </div>
       </div>
     </main>
-      <StickyCheckoutBar/>
-</>  );
+  );
 }

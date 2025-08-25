@@ -11,17 +11,8 @@ function etaString(){
   return d.toLocaleDateString(undefined, opts);
 }
 
-import STORE_CONFIG from "@/lib/storeConfig";
-
 export default function Success(){
   const router = useRouter();
-  const id = router?.query?.id;
-  const to = (STORE_CONFIG.ADMIN_WHATSAPP_NUMBER || '').replace(/[^0-9]/g,'');
-  const msg = encodeURIComponent(`Order ${id||''} placed from ${STORE_CONFIG.NAME||'Maa Mobile'}`);
-
-  const { query } = useRouter();
-  const [oid, setOid] = useState("");
-  const [wa, setWa] = useState("");
   const [order, setOrder] = useState(null);
   const [wa, setWa] = useState("");
 
@@ -92,11 +83,6 @@ export default function Success(){
       <section style={{marginTop:4}}>
         <ProductRow title="People also bought" category="Mobiles" />
       </section>
-    
-      <div style={{marginTop:16, display:"flex", gap:8, flexWrap:"wrap"}}>
-        <Link className="btn primary" href="/myorders">Track my order</Link>
-        <a className="btn" href={wa} target="_blank" rel="noreferrer">WhatsApp the shop</a>
-      </div>
     </main>
   );
 }
