@@ -12,7 +12,7 @@ export default function Checkout(){
   const subtotal = useMemo(()=> items.reduce((s,i)=>s+i.qty*i.price,0), [items]);
   const count = useMemo(()=> items.reduce((n,i)=>n+i.qty,0), [items]);
 
-  const [form, setForm] = useState({name:"", phone:"", address:"", whatsapp:""});
+  const [form, setForm] = useState({name:"", phone:"", address:"", whatsapp:"8908884402"});
 
   function update(k,v){ setForm(prev => ({...prev, [k]: v})); }
 

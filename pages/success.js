@@ -3,110 +3,74 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import ProductRow from "@/components/ProductRow";
+import STORE_CONFIG from "@/lib/storeConfig";
 
 function etaString(){
   const d = new Date();
-  d.setDate(d.getDate() + 3); // +3 days delivery estimate
+  d.setDate(d.getDate() + 3);
   const opts = { weekday: "short", month: "short", day: "numeric" };
   return d.toLocaleDateString(undefined, opts);
 }
 
 export default function Success(){
-  const { query } = useRouter();
-  const [oid, setOid] = useState("");
+  const router = useRouter();
+  const [items, setItems] = useState([]);
   const [wa, setWa] = useState("");
-  const [order, setOrder] = useState(null);
-
-  useEffect(()=>{
-    setOid(query?.oid || "");
-    setWa(query?.wa ? decodeURIComponent(query.wa) : "");
-  }, [query]);
 
   useEffect(()=>{
     try {
-      const raw = sessionStorage.getItem("maa_last_order");
-      if(raw) setOrder(JSON.parse(raw));
+      const cart = JSON.parse(localStorage.getItem("maa_cart_v1") || "[]");
+      setItems(cart);
+      const num = (localStorage.getItem("maa_phone") || "8908884402").replace(/[^0-9]/g,"");
+      const text = encodeURIComponent(`Hi! I placed order ${router.query.id||""}. Could you confirm?`);
+      const url = num ? `https://wa.me/${num}?text=${text}` : `https://wa.me/?text=${text}`;
+      setWa(url);
     } catch {}
-  }, []);
+  }, [router.query.id]);
+
+  const total = useMemo(()=> items.reduce((s,i)=>s + i.qty*i.price, 0), [items]);
 
   return (
-    <main style={{maxWidth:1200, margin:"20px auto", padding:"0 16px"}}>
-      {/* Header */}
-      <section style={{display:"grid", gridTemplateColumns:"1fr 360px", gap:16, alignItems:"start"}}>
-        <div style={{background:"#fff", border:"1px solid #eee", borderRadius:12}}>
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 16px", borderBottom:"1px solid #eee"}}>
-            <div style={{fontWeight:800}}>Thanks for shopping with us!</div>
-            <div style={{background:"#e6ffed", border:"1px solid #b7f5c0", color:"#08660d", fontWeight:800, padding:"4px 10px", borderRadius:999}}>✓ Order Placed</div>
-          </div>
-
-          <div style={{padding:"14px 16px"}}>
-            <div style={{display:"flex", alignItems:"center", gap:10}}>
-              <span style={{fontWeight:700}}>Delivery by</span>
-              <span>{etaString()}</span>
-            </div>
-
-            <div style={{marginTop:10}}>
-              <a href="#" className="btn">Track &amp; manage order</a>
-            </div>
-
-            <div style={{marginTop:16, background:"#fff8e1", border:"1px solid #ffe199", borderRadius:8, padding:12}}>
-              <div style={{fontWeight:700, marginBottom:6}}>Delivery requires an OTP</div>
-              <div className="small">We may ask for an OTP at delivery to confirm open box inspection. Don’t share your OTP before the package arrives.</div>
-            </div>
-
-            <div style={{marginTop:16, display:"flex", justifyContent:"center"}}>
-              <Link href="/" className="btn primary" style={{minWidth:260, textAlign:"center"}}>Continue Shopping</Link>
-            </div>
-          </div>
+    <main style={{maxWidth:1000, margin:"16px auto", padding:"0 16px", display:"grid", gap:16}}>
+      <header className="header">
+        <div className="bar">
+          <Link className="logo" href="/">
+            <img src="/assets/logo.svg" width="36" height="36" alt="logo"/>
+            <div className="title">Order Placed</div>
+          </Link>
+          <div></div>
+          <div className="actions"><Link className="badge" href="/">Continue shopping</Link></div>
         </div>
+      </header>
 
-        <aside style={{background:"#fff", border:"1px solid #eee", borderRadius:12, padding:12}}>
-          <div style={{fontWeight:800, marginBottom:10}}>Deliver to</div>
-          {order ? (
-            <div>
-              <div style={{fontWeight:700}}>{order.name}</div>
-              <div className="small" style={{marginTop:6, whiteSpace:"pre-wrap"}}>{order.address}</div>
-              <div className="small" style={{marginTop:6}}>Phone: {order.phone}</div>
-              <div className="small" style={{marginTop:6}}>Payment: {order.payment}</div>
-              <div className="small" style={{marginTop:6, color:"#666"}}>Order ID: {oid || order.id}</div>
+      <section style={{background:"#fff", border:"1px solid #eee", borderRadius:14, padding:14}}>
+        <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
+          <div style={{fontSize:18, fontWeight:800}}>🎉 Order {router.query.id}</div>
+          <div className="small" style={{padding:"4px 8px", border:"1px solid #eee", borderRadius:999}}>Seller: {STORE_CONFIG.NAME} · +91 8908884402</div>
+        </div>
+        <div className="small" style={{marginTop:6}}>Estimated delivery: <strong>{etaString()}</strong></div>
+        <div style={{display:"grid", gap:10, gridTemplateColumns:"1fr 1fr", marginTop:10}}>
+          <Link className="btn primary" href="/myorders">Show order details</Link>
+          {wa ? <a className="btn" target="_blank" rel="noopener" href={wa}>Open WhatsApp</a> : null}
+        </div>
+      </section>
+
+      <section style={{background:"#fff", border:"1px solid #eee", borderRadius:12, padding:12}}>
+        <div style={{fontWeight:800, marginBottom:8}}>Order Summary</div>
+        <div style={{display:"grid", gap:10}}>
+          {items.map(i => (
+            <div key={i.id} style={{display:"grid", gridTemplateColumns:"64px 1fr auto", gap:10, alignItems:"center"}}>
+              <img src={i.image} alt={i.name} width={64} height={64} loading="lazy"/>
+              <div><div className="name">{i.name}</div><div className="small">Qty: {i.qty}</div></div>
+              <div><strong>₹{(i.qty*i.price).toLocaleString()}</strong></div>
             </div>
-          ) : (
-            <div className="small">Order details unavailable (session cleared). You can still send details via WhatsApp below.</div>
+          ))}
+          {items.length>0 && (
+            <div style={{display:"flex", justifyContent:"space-between", fontWeight:800}}>
+              <span>Total</span><span>₹{total.toLocaleString()}</span>
+            </div>
           )}
-
-          <div style={{marginTop:12}}>
-            {wa ? <a className="btn gold" target="_blank" rel="noopener" href={wa}>Send Order Details on WhatsApp</a> : null}
-          </div>
-        </aside>
-      </section>
-
-      {/* Items summary */}
-      {order && (
-        <section style={{marginTop:16, background:"#fff", border:"1px solid #eee", borderRadius:12, padding:12}}>
-          <div style={{fontWeight:800, marginBottom:8}}>Order Items</div>
-          <div style={{display:"grid", gap:10}}>
-            {order.items.map(i => (
-              <div key={i.id} style={{display:"grid", gridTemplateColumns:"80px 1fr auto", gap:10, alignItems:"center", border:"1px solid #f1f1f1", borderRadius:10, padding:8}}>
-                <img src={i.image} alt={i.name} style={{width:80, height:80, objectFit:"contain", background:"#fafafa", borderRadius:8}}/>
-                <div>
-                  <div style={{fontWeight:700}}>{i.name}</div>
-                  <div className="small">Qty: {i.qty}</div>
-                </div>
-                <div style={{fontWeight:800}}>₹{(i.qty*i.price).toLocaleString()}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{display:"flex", justifyContent:"flex-end", marginTop:10, fontWeight:800}}>Total: ₹{order.total.toLocaleString()}</div>
-        </section>
-      )}
-
-      {/* Suggestions */}
-      <section style={{marginTop:16}}>
-        <ProductRow title="You might be also interested in" category="Electronics" />
-      </section>
-      <section>
-        <ProductRow title="You May Also Like..." category="Mobiles" />
+        </div>
       </section>
     </main>
   );
