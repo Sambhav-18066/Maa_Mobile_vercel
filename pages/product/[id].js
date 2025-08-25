@@ -18,7 +18,7 @@ export default function ProductPage(){
 
   if(!p) return (<><main style={{maxWidth:1000,margin:"20px auto",padding:"0 16px"}}>Loading…</main><StickyCheckoutBar/></>);
 
-  return (
+  return (<>
     <main style={{maxWidth:1000, margin:"20px auto", padding:"0 16px"}}>
       <nav style={{marginBottom:10}}><Link href="/">← Back to Home</Link></nav>
       <div style={{display:"grid", gridTemplateColumns:"420px 1fr", gap:20, alignItems:"start"}}>
@@ -44,5 +44,5 @@ export default function ProductPage(){
       </div>
     </main>
       <StickyCheckoutBar/>
-  );
+</>  );
 }
