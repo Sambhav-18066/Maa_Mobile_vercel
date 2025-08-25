@@ -18,7 +18,7 @@ export default function AdminOrders(){
   async function load(){
     setError("");
     try {
-      const res = await fetch("/api/orders/list?key="+encodeURIComponent(key));
+      const res = await fetch("/api/orders/list", { headers: { "x-admin-key": key } });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed");
       setOrders(json.orders || []);
@@ -31,7 +31,7 @@ export default function AdminOrders(){
   async function patch(id, patch){
     const res = await fetch("/api/orders/update", {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: {"Content-Type":"application/json", "x-admin-key": key },
       body: JSON.stringify({ key, id, patch })
     });
     const json = await res.json();
