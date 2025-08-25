@@ -1,3 +1,9 @@
+
+/* depth buttons */
+.btn { box-shadow: 0 2px 0 rgba(0,0,0,.1); transition: transform .05s ease, box-shadow .1s ease; padding:8px 12px; border:1px solid #e5e7eb; border-radius:10px; background:#fff; }
+.btn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,.2); }
+.badge { padding:6px 10px; border:1px solid #e5e7eb; border-radius:999px; background:#fff; font-size: 14px; }
+.small { font-size: 13px; color:#6b7280; }
 .subcats { max-width: 1200px; margin: 8px auto; padding: 0 16px; display: grid; gap: 10px; }
 .subcat .title { font-weight: 800; margin-bottom: 6px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }

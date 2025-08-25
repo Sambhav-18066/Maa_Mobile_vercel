@@ -1,16 +1,12 @@
-// at the very top (before the component)
-export async function getServerSideProps() {
-  return { props: {} };
-}
+export async function getServerSideProps(){ return { props: {} }; }
 
+"use client";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import ProductRow from "@/components/ProductRow";
 
 function etaString(){
-  const d = new Date();
-  d.setDate(d.getDate() + 3);
+  const d = new Date(); d.setDate(d.getDate() + 3);
   const opts = { weekday: "short", month: "short", day: "numeric" };
   return d.toLocaleDateString(undefined, opts);
 }
@@ -19,30 +15,27 @@ export default function Success(){
   const router = useRouter();
   const [order, setOrder] = useState(null);
   const [wa, setWa] = useState("");
-  const [items, setItems] = useState([]); // ← ensure defined
+  const [items, setItems] = useState([]);
 
   useEffect(()=>{
     const id = router.query.id;
     if (!id) return;
-    // snapshot from cart for summary
     const last = JSON.parse(localStorage.getItem("maa_last_items") || "[]");
     setOrder({ id, items: last });
     setItems(last);
-    const num = (localStorage.getItem("maa_phone") || "").replace(/[^0-9]/g,"");
+    const num = (localStorage.getItem("maa_phone") || "8908884402").replace(/[^0-9]/g,"");
     const text = encodeURIComponent(`Hi! I placed order ${id}. Could you confirm?`);
     setWa(num ? `https://wa.me/${num}?text=${text}` : `https://wa.me/?text=${text}`);
   }, [router.query.id]);
 
-  // safe total (works if items is empty or still loading)
   const total = useMemo(()=> (items || []).reduce((s,i)=> s + i.qty*i.price, 0), [items]);
-
   const offline = router.query.offline === "1";
 
   return (
     <main style={{maxWidth:1000, margin:"16px auto", padding:"0 16px", display:"grid", gap:16}}>
       <header className="header">
         <div className="bar">
-          <Link className="logo" href="/"><img src="/assets/logo.svg" width="36" height="36" alt="logo"/><div className="title">Maa Mobile</div></Link>
+          <Link className="logo" href="/"><div className="title">Maa Mobile</div></Link>
           <div></div>
           <div className="actions"><Link className="badge" href="/">Continue shopping</Link></div>
         </div>
@@ -53,13 +46,22 @@ export default function Success(){
         {offline
           ? <div className="small" style={{color:"#b00020"}}>You appear to be offline—no stress. We'll ping the order when you're back.</div>
           : <div className="small">We’ll ping you when it’s approved. ETA: <strong>{etaString()}</strong></div>}
+
         <div style={{display:"grid", gap:10, gridTemplateColumns:"1fr 1fr", marginTop:10}}>
           <Link className="btn primary big" href="/myorders">Track in app</Link>
           {wa ? <a className="btn big" target="_blank" rel="noopener" href={wa}>Open WhatsApp</a> : null}
         </div>
+
+        <div style={{marginTop:10, display:"flex", gap:8, flexWrap:"wrap"}}>
+          <a className="btn" href={"sms:?&body="+encodeURIComponent("Order "+(router.query.id||"")+" placed at Maa Mobile. ETA: "+etaString())}>Text (SMS) update</a>
+          <button className="btn" onClick={()=>{
+            const text=`Order ${router.query.id||""} placed at Maa Mobile. ETA: ${etaString()}`;
+            if(navigator.share){ navigator.share({title:"Order placed", text, url:window.location.href}).catch(()=>{}); }
+            else { navigator.clipboard?.writeText(text+" "+window.location.href); alert("Share text copied"); }
+          }}>Share</button>
+        </div>
       </section>
 
-      {/* Order details */}
       {(order?.items || []).length > 0 && (
         <section style={{background:"#fff", border:"1px solid #eee", borderRadius:12, padding:12}}>
           <div style={{fontWeight:800, marginBottom:8}}>Order Items</div>
@@ -77,10 +79,6 @@ export default function Success(){
           </div>
         </section>
       )}
-
-      <section style={{marginTop:4}}>
-        <ProductRow title="People also bought" category="Mobiles" />
-      </section>
     </main>
   );
 }
