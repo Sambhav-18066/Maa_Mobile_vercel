@@ -1,10 +1,92 @@
+"use client";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import ProductCard from "../components/ProductCard";
+
+// --- tiny utilities ---
+function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+function autoAdvance(fn, ms){ let t; const start=()=>t=setInterval(fn, ms); const stop=()=>{ if(t) clearInterval(t); }; return { start, stop }; }
 
 export default function Home(){
+  // products
+  const [all, setAll] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(()=>{
+    let mounted = true;
+    fetch("/products.json")
+      .then(r=>r.json())
+      .then(d=>{ if(mounted){ setAll(Array.isArray(d)?d:[]); setLoading(false); } })
+      .catch(()=> setLoading(false));
+    return ()=>{ mounted=false; };
+  }, []);
+
+  // --- HERO CAROUSEL ---
+  // Replace the URLs below with your real images if you like
+  const hero = useMemo(()=>[
+    { src: "/assets/hero-1.jpg", alt: "Latest smartphones" },
+    { src: "/assets/hero-2.jpg", alt: "Accessories deals" },
+    { src: "/assets/hero-3.jpg", alt: "Home appliances" },
+    { src: "/assets/hero-4.jpg", alt: "Electronics & more" } // <= the 4th one people said was missing
+  ],[]);
+  const [idx, setIdx] = useState(0);
+  const totalSlides = hero.length;
+
+  // auto-rotate every 4s, pause on hover/touch
+  const rotator = useRef(null);
+  useEffect(()=>{
+    rotator.current = autoAdvance(()=> setIdx(i => (i+1)%totalSlides), 4000);
+    rotator.current.start();
+    return rotator.current.stop;
+  }, [totalSlides]);
+
+  function go(i){ setIdx(clamp(i,0,totalSlides-1)); }
+  function prev(){ setIdx(i => (i-1+totalSlides)%totalSlides); }
+  function next(){ setIdx(i => (i+1)%totalSlides); }
+
+  // --- quick derived product lists ---
+  const featured = useMemo(()=> all.slice(0, 8), [all]);
+  const mobiles = useMemo(()=> all.filter(p => (p.category||"").toLowerCase().includes("mobile")).slice(0,8), [all]);
+
+  // --- search bar state ---
+  const [q, setQ] = useState("");
+  function submitSearch(e){
+    e.preventDefault();
+    const term = q.trim();
+    if(!term) return;
+    window.location.href = "/search?q=" + encodeURIComponent(term);
+  }
+
   return (
-    <main style={{maxWidth:1000, margin:"16px auto", padding:"0 16px"}}>
-      <nav className="categories">
-        {/* SUBCATS */}
+    <main className="page" style={{maxWidth:1120, margin:"0 auto", padding:"0 16px"}}>
+      {/* HEADER */}
+      <header className="header" style={{padding:"10px 0"}}>
+        <div className="bar">
+          <Link className="logo" href="/" style={{display:"flex", alignItems:"center", gap:10, textDecoration:"none"}}>
+            <img src="/assets/logo.svg" alt="logo" width="36" height="36" />
+            <div className="title">Maa Mobile</div>
+          </Link>
+
+          {/* Search */}
+          <form onSubmit={submitSearch} style={{display:"flex", gap:8, justifySelf:"center"}}>
+            <input
+              value={q}
+              onChange={e=>setQ(e.target.value)}
+              placeholder="Search phones, accessories, LPG, appliances…"
+              aria-label="Search"
+              style={{minWidth:320}}
+            />
+            <button className="btn primary">Search</button>
+          </form>
+
+          <div style={{textAlign:"right"}}>
+            <Link className="badge" href="/myorders">My Orders</Link>
+          </div>
+        </div>
+      </header>
+
+      {/* SUB-CATEGORY CHIPS (place above hero) */}
+      <nav className="categories" style={{marginTop:6}}>
         <div className="subcats">
           <div className="subcat">
             <div className="title">Mobile Phone</div>
@@ -18,6 +100,7 @@ export default function Home(){
               <a className="chip" href="/search?q=HMD Nokia">HMD (Nokia)</a>
             </div>
           </div>
+
           <div className="subcat">
             <div className="title">Accessories</div>
             <div className="chips">
@@ -31,6 +114,7 @@ export default function Home(){
               <a className="chip" href="/search?q=bluetooth speaker">bluetooth speakers</a>
             </div>
           </div>
+
           <div className="subcat">
             <div className="title">LPG</div>
             <div className="chips">
@@ -42,6 +126,7 @@ export default function Home(){
               <a className="chip" href="/search?q=lpg fittings">fittings</a>
             </div>
           </div>
+
           <div className="subcat">
             <div className="title">Electronics</div>
             <div className="chips">
@@ -53,6 +138,7 @@ export default function Home(){
               <a className="chip" href="/search?q=wires">wires</a>
             </div>
           </div>
+
           <div className="subcat">
             <div className="title">Home Appliances</div>
             <div className="chips">
@@ -70,8 +156,91 @@ export default function Home(){
           </div>
         </div>
       </nav>
-      <section style={{marginTop:12}}>
-        <Link className="btn primary" href="/search?q=smartphone">Browse smartphones</Link>
+
+      {/* HERO CAROUSEL */}
+      <section className="section" style={{marginTop:10}}>
+        <div
+          onMouseEnter={()=>rotator.current?.stop()}
+          onMouseLeave={()=>rotator.current?.start()}
+          onTouchStart={()=>rotator.current?.stop()}
+          onTouchEnd={()=>rotator.current?.start()}
+          style={{position:"relative", overflow:"hidden", borderRadius:14, border:"1px solid #e5e7eb", background:"#fff"}}
+        >
+          <div
+            style={{
+              display:"grid",
+              gridTemplateColumns:`repeat(${totalSlides}, 100%)`,
+              transform:`translateX(-${idx*100}%)`,
+              transition:"transform .5s ease",
+              width:`${totalSlides*100}%`
+            }}
+          >
+            {hero.map((h, i)=>(
+              <div key={i} style={{position:"relative"}}>
+                <img
+                  src={h.src}
+                  alt={h.alt}
+                  onError={(e)=>{ e.currentTarget.src="/assets/hero-fallback.jpg"; }}
+                  style={{width:"100%", height:260, objectFit:"cover", display:"block"}}
+                  loading={i===0?"eager":"lazy"}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* controls */}
+          <button className="btn" aria-label="Previous" onClick={prev}
+                  style={{position:"absolute", left:10, top:"50%", transform:"translateY(-50%)"}}>‹</button>
+          <button className="btn" aria-label="Next" onClick={next}
+                  style={{position:"absolute", right:10, top:"50%", transform:"translateY(-50%)"}}>›</button>
+
+          {/* dots */}
+          <div style={{position:"absolute", bottom:10, left:0, right:0, display:"flex", justifyContent:"center", gap:6}}>
+            {hero.map((_,i)=>(
+              <button
+                key={i}
+                onClick={()=>go(i)}
+                aria-label={`Go to slide ${i+1}`}
+                className="badge"
+                style={{opacity: i===idx?1:.5}}
+              >
+                {i+1}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURED PRODUCTS */}
+      <section className="section" style={{marginTop:16}}>
+        <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+          <h2 style={{margin:0}}>Featured</h2>
+          <Link className="badge" href="/search?q=best">See all</Link>
+        </div>
+        <div style={{display:"grid", gap:12, gridTemplateColumns:"repeat(auto-fill, minmax(180px, 1fr))"}}>
+          {loading && Array.from({length:8}).map((_,i)=>(
+            <div key={i} style={{height:240, border:"1px solid #eee", borderRadius:14, background:"#fff"}} />
+          ))}
+          {!loading && featured.map(p=>(
+            <ProductCard key={p.id} p={p} />
+          ))}
+        </div>
+      </section>
+
+      {/* MOBILES ROW */}
+      <section className="section" style={{marginTop:16, marginBottom:24}}>
+        <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+          <h2 style={{margin:0}}>Mobiles</h2>
+          <Link className="badge" href="/search?q=smartphone">Browse smartphones</Link>
+        </div>
+        <div style={{display:"grid", gap:12, gridTemplateColumns:"repeat(auto-fill, minmax(180px, 1fr))"}}>
+          {loading && Array.from({length:8}).map((_,i)=>(
+            <div key={i} style={{height:240, border:"1px solid #eee", borderRadius:14, background:"#fff"}} />
+          ))}
+          {!loading && mobiles.map(p=>(
+            <ProductCard key={p.id} p={p} />
+          ))}
+        </div>
       </section>
     </main>
   );
