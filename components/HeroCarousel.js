@@ -21,7 +21,7 @@ export default function HeroCarousel(){
   return (
     <section style={{maxWidth:1200, margin:"12px auto 0", position:"relative"}}>
       <div style={{overflow:"hidden", borderRadius:12, border:"1px solid #f1eaff"}}>
-        <img src={slides[i].img} alt={slides[i].caption}
+        <img src={slides[i].img} alt={slides[i].caption} onError={(e)=>{e.currentTarget.src="/assets/hero-mobiles.svg"}}
              style={{width:"100%", height:"320px", objectFit:"cover", background:"#fafafa"}}/>
       </div>
       <button onClick={prev} style={{position:"absolute", left:12, top:"45%", fontSize:28, lineHeight:1, padding:"4px 10px", border:"none", borderRadius:6, background:"rgba(0,0,0,.35)", color:"#fff", cursor:"pointer"}}>‹</button>
