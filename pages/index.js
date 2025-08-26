@@ -1,4 +1,4 @@
-
+"use client"
 // Stop static prerender of "/"; render at request time instead.
 export async function getServerSideProps() {
   return { props: {} };
