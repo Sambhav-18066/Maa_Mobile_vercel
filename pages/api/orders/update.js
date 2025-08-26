@@ -10,6 +10,7 @@ const supabase = createClient(supabaseUrl, serviceKey);
 function send(res, status, data) {
   res.statusCode = status;
   res.setHeader("content-type", "application/json");
+  res.setHeader("cache-control", "no-store, max-age=0, must-revalidate");
   res.end(JSON.stringify(data));
 }
 const ok = (res, data) => send(res, 200, data);
