@@ -1,46 +1,39 @@
-
 "use client";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useCart } from "@/context/CartContext";
 
 export default function ProductPage(){
-  const { query } = useRouter();
-  const { add } = useCart();
-  const [all, setAll] = useState([]);
-  const [p, setP] = useState(null);
+  const router = useRouter();
+  const { id } = router.query;
+  const [product, setProduct] = useState(null);
 
-  useEffect(()=>{ fetch("/products.json").then(r=>r.json()).then(setAll); }, []);
   useEffect(()=>{
-    if(query.id && all.length){ setP(all.find(x=>x.id===query.id)); }
-  }, [query.id, all]);
+    if(!id) return;
+    fetch("/products.json").then(r=>r.json()).then(all=>{
+      setProduct(all.find(p=>p.id===id) || null);
+    }).catch(()=>{});
+  }, [id]);
 
-  if(!p) return <main style={{maxWidth:1000,margin:"20px auto",padding:"0 16px"}}>Loading…</main>;
+  function buyNow(){
+    try {
+      const cart = JSON.parse(localStorage.getItem("maa_cart_v1")||"[]");
+      const ex = cart.find(x=>x.id===product.id);
+      if(ex) ex.qty += 1; else cart.push({...product, qty:1});
+      localStorage.setItem("maa_cart_v1", JSON.stringify(cart));
+      localStorage.setItem("maa_last_items", JSON.stringify(cart));
+    } catch {}
+    window.location.href="/checkout";
+  }
 
+  if(!product) return <main style={{maxWidth:900, margin:"16px auto", padding:"0 16px"}}>Loading…</main>;
   return (
-    <main style={{maxWidth:1000, margin:"20px auto", padding:"0 16px"}}>
-      <nav style={{marginBottom:10}}><Link href="/">← Back to Home</Link></nav>
-      <div style={{display:"grid", gridTemplateColumns:"420px 1fr", gap:20, alignItems:"start"}}>
-        <div style={{border:"1px solid #eee", borderRadius:8, padding:10, textAlign:"center"}}>
-          <img src={p.image} alt={p.name} style={{width:"100%", height:360, objectFit:"contain"}}/>
-        </div>
-        <div>
-          <h1 style={{margin:"0 0 8px"}}>{p.name}</h1>
-          <div style={{color:"#388e3c", fontWeight:800, fontSize:20}}>₹{p.price.toLocaleString()}</div>
-          {p.mrp>p.price && <div style={{textDecoration:"line-through", color:"#666"}}>₹{p.mrp.toLocaleString()}</div>}
-          <div style={{margin:"10px 0"}}>Rating: ★ {Number(p.rating).toFixed(1)}</div>
-          <p style={{maxWidth:540}}>{p.description}</p>
-          <div style={{display:"flex", gap:10, marginTop:12}}>
-            <button className="btn primary" onClick={()=>add(p,1)}>Add to cart</button>
-            <Link className="btn" href="/checkout">Buy Now</Link>
-          </div>
-          <ul style={{marginTop:16, color:"#333"}}>
-            <li>Free delivery & easy returns</li>
-            <li>1 year standard warranty</li>
-            <li>Cash on Delivery & UPI supported</li>
-          </ul>
-        </div>
+    <main style={{maxWidth:900, margin:"16px auto", padding:"0 16px"}}>
+      <img src={product.image} alt={product.name} style={{width:"100%", maxHeight:300, objectFit:"contain", background:"#fafafa", borderRadius:8}} />
+      <h1>{product.name}</h1>
+      <div className="small" style={{color:"#374151"}}>{product.category}</div>
+      <div style={{fontWeight:800, marginTop:6}}>₹{(product.price||0).toLocaleString()}</div>
+      <div style={{marginTop:10}}>
+        <button className="btn primary" onClick={buyNow}>Buy Now</button>
       </div>
     </main>
   );

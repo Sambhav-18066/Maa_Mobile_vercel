@@ -1,32 +1,23 @@
+- self.addEventListener("install", (e)=>{ self.skipWaiting(); });
+- self.addEventListener("activate", (e)=>{ self.clients.claim(); });
+const CACHE_NAME = "mm-cache-v3"; // bump this
 
-const CACHE_NAME = "maa-cache-v1";
-const OFFLINE_URL = "/offline.html";
-const ASSETS = ["/", "/manifest.json", OFFLINE_URL];
-
-self.addEventListener("install", (e)=>{
-  e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
-  self.skipWaiting();
-});
-
+self.addEventListener("install", (e)=>{ self.skipWaiting(); });
 self.addEventListener("activate", (e)=>{
-  e.waitUntil(self.clients.claim());
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener("fetch", (e)=>{
-  const url = new URL(e.request.url);
-  if (e.request.method !== "GET") return;
-  e.respondWith((async ()=>{
-    try {
-      const res = await fetch(e.request);
-      // cache simple GETs
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(e.request, res.clone());
-      return res;
-    } catch (err) {
-      // offline fallback
-      const cache = await caches.open(CACHE_NAME);
+  if(e.request.method!=="GET") return;
+  e.respondWith(
+    caches.open(CACHE_NAME).then(async cache=>{
       const cached = await cache.match(e.request);
-      return cached || cache.match(OFFLINE_URL);
-    }
-  })());
+      const fetchP = fetch(e.request).then(res=>{ cache.put(e.request, res.clone()); return res; }).catch(()=>cached);
+      return cached || fetchP;
+    })
+  );
 });

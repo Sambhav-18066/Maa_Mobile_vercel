@@ -1,115 +1,110 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 
-const STATUSES = ["PLACED","APPROVED","OUT_FOR_DELIVERY","DELIVERED","CANCELLED"];
+const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY || ""; // must be set in Vercel
 
-export default function AdminOrders(){
+export default function Admin(){
   const [key, setKey] = useState("");
+  const [ok, setOk] = useState(false);
+  const [filter, setFilter] = useState("all");
   const [orders, setOrders] = useState([]);
-  const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [error, setError] = useState("");
 
+  // hydrate key from localStorage and/or ?key=
   useEffect(()=>{
-    const k = sessionStorage.getItem("maa_admin_key") || "";
-    setKey(k);
+    const fromLs = localStorage.getItem("maa_admin_key") || "";
+    const fromQuery = new URLSearchParams(window.location.search).get("key") || "";
+    const val = fromQuery || fromLs;
+    if (val) { setKey(val); setOk(val === ADMIN_KEY); }
   }, []);
 
-  async function load(){
-    setError("");
-    try {
-      const res = await fetch("/api/orders/list", { headers: { "x-admin-key": key } });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed");
-      setOrders(json.orders || []);
-    } catch (e) {
-      setError(String(e));
-    }
-  }
-  useEffect(()=>{ if (key) load(); }, [key]);
+  // demo fetch; replace with your API
+  useEffect(()=>{
+    // TODO: fetch("/api/orders").then(r=>r.json()).then(setOrders)
+    setOrders([]); // keep it empty until you wire your backend
+  }, []);
 
-  async function patch(id, patch){
-    const res = await fetch("/api/orders/update", {
-      method: "POST",
-      headers: {"Content-Type":"application/json", "x-admin-key": key },
-      body: JSON.stringify({ key, id, patch })
-    });
-    const json = await res.json();
-    if (!res.ok) { alert(json.error||"Update failed"); return; }
-    setOrders(prev => prev.map(o => o.id===id ? json.order : o));
+  function login(e){
+    e.preventDefault();
+    const ok = key === ADMIN_KEY;
+    setOk(ok);
+    if (ok) localStorage.setItem("maa_admin_key", key);
   }
 
-  const filtered = useMemo(()=>{
-    return orders.filter(o => (!statusFilter || o.status===statusFilter) &&
-      (!q || (o.name?.toLowerCase().includes(q.toLowerCase()) || o.phone?.includes(q) || o.id?.includes(q))));
-  }, [orders, statusFilter, q]);
+  function isToday(ts){ try{ const d = new Date(ts); const t = new Date(); return d.toDateString() === t.toDateString(); }catch{return false;} }
 
-  function quickFilterToday(){
-    const today = new Date().toISOString().slice(0,10);
-    setOrders(prev => prev.filter(o => (o.created_at||"").slice(0,10) === today));
+  // quick actions (client only — wire your API where marked)
+  async function applyPreset(o, type){
+    const now = Date.now();
+    const patch = {};
+    if(type==="approve"){ patch.status="approved"; patch.approvedAt = new Date(now).toISOString(); patch.eta = new Date(now + 2*60*60*1000).toISOString(); }
+    if(type==="ofd"){ patch.status="out_for_delivery"; patch.outForDeliveryAt = new Date(now).toISOString(); patch.eta = new Date(now + 60*60*1000).toISOString(); }
+    // TODO: await fetch(`/api/orders/${o.id}`, { method:"PATCH", body: JSON.stringify(patch) })
+    alert(`Preset "${type}" would update order ${o.id}. Wire your API in admin/index.js`);
   }
 
-  function presetApprove(o){
-    const eta = new Date(Date.now() + 2*60*60*1000).toISOString(); // +2 hours
-    patch(o.id, { status: "APPROVED", eta });
-  }
-  function presetOutForDelivery(o){
-    const eta = new Date(Date.now() + 60*60*1000).toISOString(); // +1 hour
-    patch(o.id, { status: "OUT_FOR_DELIVERY", eta });
-  }
-
-  function nudge(o){
-    const num = (o.phone||"").replace(/[^0-9]/g,"");
-    const text = encodeURIComponent(`Hi ${o.name||""}, quick update on your order ${o.id}: ${o.status?.replaceAll("_"," ")}${o.eta ? " | ETA " + new Date(o.eta).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : ""}`);
+  function nudgeWA(o){
+    const num = (o.phone || "").replace(/[^0-9]/g,"");
+    const text = encodeURIComponent(`Update for order ${o.id}: Status - ${o.status || "placed"}. ETA: ${o.eta ? new Date(o.eta).toLocaleTimeString() : "N/A"}`);
     const url = num ? `https://wa.me/${num}?text=${text}` : `https://wa.me/?text=${text}`;
     window.open(url, "_blank");
   }
 
-  return (
-    <main style={{maxWidth:1000, margin:"16px auto", padding:"0 16px"}}>
-      <h2>Admin · Orders</h2>
-      <div style={{display:"grid", gap:10, gridTemplateColumns:"1fr 1fr 1fr 1fr"}}>
-        <input type="password" placeholder="Admin key" value={key} onChange={e=>{setKey(e.target.value); sessionStorage.setItem("maa_admin_key", e.target.value);} }/>
-        <input placeholder="Search name/phone/order id" value={q} onChange={e=>setQ(e.target.value)} />
-        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-          <option value="">All statuses</option>
-          {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <div style={{display:"flex", gap:8}}>
-          <button className="btn" onClick={load}>Reload</button>
-          <button className="btn" onClick={quickFilterToday}>Today</button>
-          <button className="btn" onClick={()=>setStatusFilter("PENDING")}>Pending</button>
-          <button className="btn" onClick={()=>setStatusFilter("OUT_FOR_DELIVERY")}>Out for delivery</button>
-        </div>
-      </div>
-      {error && <div className="small" style={{color:"#b00020"}}>{error}</div>}
+  const filtered = useMemo(()=> (orders||[]).filter(o =>
+    filter==="all" ? true :
+    filter==="today" ? isToday(o.created_at||o.createdAt) :
+    filter==="pending" ? ((o.status||"")==="placed") :
+    (o.status||"")==="out_for_delivery"
+  ), [orders, filter]);
 
-      <div style={{display:"grid", gap:10, marginTop:12}}>
-        {filtered.map(o => (
-          <div key={o.id} style={{display:"grid", gridTemplateColumns:"1fr 280px", gap:12, border:"1px solid #eee", borderRadius:10, padding:10}}>
-            <div>
-              <div style={{fontWeight:800}}>{o.id} — {o.name} ({o.phone})</div>
-              <div className="small">{o.address}</div>
-              <div className="small">Payment: {o.payment} | Placed: {o.created_at ? new Date(o.created_at).toLocaleString() : "-"}</div>
-              <div className="small">Items: {o.items?.map(i=> i.name + " × " + i.qty).join(", ")}</div>
-              <div style={{fontWeight:800}}>Total: ₹{Number(o.total||0).toLocaleString()}</div>
-            </div>
-            <div style={{minWidth:260, display:"grid", gap:8}}>
-              <label className="small">Status</label>
-              <select value={o.status || "PLACED"} onChange={e=>patch(o.id,{status: e.target.value})}>
-                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <div className="small">ETA: {o.eta ? new Date(o.eta).toLocaleString() : "—"}</div>
-              <input type="datetime-local" onChange={e=>patch(o.id, { eta: e.target.value ? new Date(e.target.value).toISOString() : null })}/>
-              <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-                <button className="btn" onClick={()=>presetApprove(o)}>Approve (+2h)</button>
-                <button className="btn" onClick={()=>presetOutForDelivery(o)}>Out for delivery (+1h)</button>
-                <button className="btn" onClick={()=>nudge(o)}>Nudge (WA)</button>
-              </div>
-            </div>
-          </div>
-        ))}
+  // gate
+  if (!ok) {
+    return (
+      <main style={{maxWidth:500, margin:"40px auto", padding:"0 16px"}}>
+        <h1>Admin login</h1>
+        <form onSubmit={login} style={{display:"grid", gap:10, marginTop:12}}>
+          <input value={key} onChange={e=>setKey(e.target.value)} placeholder="Enter admin key" />
+          <button className="btn primary">Enter</button>
+        </form>
+        {ADMIN_KEY ? <div className="small" style={{marginTop:8}}>Tip: you can append <code>?key=YOUR_KEY</code> to the URL.</div> : (
+          <div className="small" style={{marginTop:8, color:"#b00020"}}>NEXT_PUBLIC_ADMIN_KEY is not set on the server.</div>
+        )}
+      </main>
+    );
+  }
+
+  return (
+    <main style={{maxWidth:900, margin:"16px auto", padding:"0 16px"}}>
+      <h1>Admin</h1>
+
+      <div className="toolbar" style={{display:"flex", gap:8, flexWrap:"wrap", alignItems:"center"}}>
+        <select value={filter} onChange={e=>setFilter(e.target.value)}>
+          <option value="all">All</option>
+          <option value="today">Today</option>
+          <option value="pending">Pending</option>
+          <option value="ofd">Out for delivery</option>
+        </select>
+        <a className="badge" href="/admin">Refresh</a>
       </div>
+
+      <ul style={{display:"grid", gap:10, listStyle:"none", padding:0, marginTop:12}}>
+        {filtered.map(o => (
+          <li key={o.id} style={{border:"1px solid #eee", borderRadius:10, padding:10, background:"#fff"}}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline", gap:8}}>
+              <div><strong>#{o.id}</strong> • {o.status || "placed"}</div>
+              <div className="small">{o.created_at || o.createdAt || ""}</div>
+            </div>
+            <div className="small" style={{marginTop:6}}>
+              {o.name} • {o.phone} • {o.address}
+            </div>
+            <div style={{display:"flex", gap:8, flexWrap:"wrap", marginTop:8}}>
+              <button className="btn" onClick={()=>applyPreset(o, "approve")}>Approve → set ETA +2h</button>
+              <button className="btn" onClick={()=>applyPreset(o, "ofd")}>Out for delivery → ETA +1h</button>
+              <button className="btn" onClick={()=>nudgeWA(o)}>Nudge (WhatsApp)</button>
+            </div>
+          </li>
+        ))}
+        {filtered.length===0 && <li className="small">No orders yet.</li>}
+      </ul>
     </main>
   );
 }
