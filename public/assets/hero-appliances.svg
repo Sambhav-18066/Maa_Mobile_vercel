@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="320">
+  <defs>
+    <linearGradient id="b" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f59e0b"/><stop offset="1" stop-color="#fbbf24"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="320" fill="url(#b)"/>
+  <text x="60" y="110" font-family="Inter,Arial" font-size="42" font-weight="900" fill="#ffffff">Appliances Upgrade Days</text>
+  <text x="60" y="170" font-family="Inter,Arial" font-size="24" fill="#fefefe">Lowest prices • Top brands • Fast delivery</text>
+  <rect x="1100" y="40" width="440" height="240" rx="20" fill="#ffffff" opacity="0.9"/>
+  <text x="1320" y="170" text-anchor="middle" font-family="Inter,Arial" font-size="32" font-weight="800" fill="#333">ACs • Fridges</text>
+</svg>

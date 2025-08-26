@@ -1,0 +1,90 @@
+[
+  {
+    "id": "mob-1",
+    "name": "MaaPhone X2 5G (8GB, 128GB)",
+    "category": "Mobiles",
+    "brand": "Maa",
+    "price": 14999,
+    "mrp": 19999,
+    "rating": 4.4,
+    "image": "/assets/photo-mobiles.svg",
+    "description": "6.6\" 120Hz display, 50MP camera, 5000mAh battery, dual 5G."
+  },
+  {
+    "id": "mob-2",
+    "name": "Pixel Nova Lite (6GB, 128GB)",
+    "category": "Mobiles",
+    "brand": "Pixel Nova",
+    "price": 11999,
+    "mrp": 14999,
+    "rating": 4.2,
+    "image": "/assets/photo-mobiles.svg",
+    "description": "Smooth Android, great cameras, fast charging."
+  },
+  {
+    "id": "elec-1",
+    "name": "Bluetooth Soundbar 150W",
+    "category": "Electronics",
+    "brand": "SonicX",
+    "price": 4999,
+    "mrp": 7999,
+    "rating": 4.1,
+    "image": "/assets/photo-soundbar.svg",
+    "description": "Deep bass, HDMI ARC, Dolby Audio support."
+  },
+  {
+    "id": "elec-2",
+    "name": "4K Smart TV 43\"",
+    "category": "Electronics",
+    "brand": "ViewMax",
+    "price": 23999,
+    "mrp": 29999,
+    "rating": 4.3,
+    "image": "/assets/photo-tv.svg",
+    "description": "Bezel-less, HDR10, Dolby Vision, 20W speakers."
+  },
+  {
+    "id": "home-1",
+    "name": "FrostFree Double Door Fridge 265L",
+    "category": "Home Appliances",
+    "brand": "ChillPro",
+    "price": 22999,
+    "mrp": 27999,
+    "rating": 4.0,
+    "image": "/assets/photo-fridge.svg",
+    "description": "Inverter compressor, 3-star energy rating."
+  },
+  {
+    "id": "home-2",
+    "name": "Inverter Split AC 1.5 Ton 5-Star",
+    "category": "Home Appliances",
+    "brand": "AeroCool",
+    "price": 33999,
+    "mrp": 38999,
+    "rating": 4.2,
+    "image": "/assets/photo-ac.svg",
+    "description": "Copper condenser, 4-way swing, silent mode."
+  },
+  {
+    "id": "lpg-1",
+    "name": "LPG Cylinder Refill (Bharat/HP/Indane)",
+    "category": "LPG",
+    "brand": "LPG",
+    "price": 980,
+    "mrp": 980,
+    "rating": 4.5,
+    "image": "/assets/photo-lpg.svg",
+    "description": "Book a refill delivery within service radius."
+  },
+  {
+    "id": "lpg-2",
+    "name": "LPG Hose & Regulator Kit",
+    "category": "LPG",
+    "brand": "SafeGas",
+    "price": 699,
+    "mrp": 999,
+    "rating": 4.1,
+    "image": "/assets/photo-regulator.svg",
+    "description": "ISI certified safety kit for home stoves."
+  }
+]
