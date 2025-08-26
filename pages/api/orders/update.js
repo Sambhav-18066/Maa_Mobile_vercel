@@ -38,7 +38,7 @@ function normalizeStatus(s){
 function nextStatus(curr){
   const i = ORDER_STATUSES.indexOf(curr || "PLACED");
   if (i === -1) return "PLACED";
-  if (curr === "DELIVERED" || curr === "RETURNED" || curr === "CANCELLED") return curr; // terminal
+  if (["DELIVERED","RETURNED","CANCELLED"].includes(curr)) return curr; // terminal
   return ORDER_STATUSES[i+1] || curr;
 }
 
@@ -48,14 +48,17 @@ export default async function handler(req, res) {
       ? req.query
       : (typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {}));
 
-    const id = src.id || src.orderId;
-    let status = normalizeStatus(src.status);     // may be null -> auto-advance
+    // Accept id in ANY common shape
+    const id = src.id || src.orderId || src.order_id;
+    let status = normalizeStatus(src.status);  // optional → we auto-advance if missing
     const notes = typeof src.notes === "string" ? src.notes : undefined;
     const eta   = typeof src.eta === "string" ? src.eta   : undefined;
 
-    if (!id) return valErr(res, [{ path: "id", message: "id (or orderId) is required" }]);
+    if (!id) {
+      return valErr(res, [{ path: "id", message: "id is required (accepted keys: id | orderId | order_id)" }]);
+    }
 
-    // get current status & timestamps
+    // Fetch current status/timestamps
     const { data: row, error: getErr } = await supabase
       .from("orders")
       .select("status,status_timestamps")
@@ -63,7 +66,7 @@ export default async function handler(req, res) {
       .single();
     if (getErr) return serverError(res, getErr.message || String(getErr));
 
-    // auto-advance if status not provided
+    // If no explicit status, auto-advance
     const newStatus = status || nextStatus(row?.status);
     if (!ORDER_STATUSES.includes(newStatus)) {
       return valErr(res, [{ path: "status", message: "invalid status. Allowed: " + ORDER_STATUSES.join(", ") }]);
