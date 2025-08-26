@@ -1,36 +1,37 @@
 import { supabaseAdmin as supabase } from "@/lib/server/supabaseAdmin";
-import { z } from "zod";
+import { ok, notAllowed, fromZodError, validationError, serverError } from "@/lib/server/http";
+import { z, ZodError } from "zod";
 
 const Item = z.object({
-  name: z.string(),
+  name: z.string({ required_error: "item.name required" }).min(1),
   sku: z.string().optional(),
-  price_paise: z.number().int().nonnegative(),
-  qty: z.number().int().positive(),
+  price_paise: z.number({ required_error: "item.price_paise required" }).int().nonnegative(),
+  qty: z.number({ required_error: "item.qty required" }).int().positive(),
   image_url: z.string().optional(),
   variant_id: z.string().uuid().optional()
 });
 
 const Address = z.object({
   user_id: z.string().uuid().optional(),
-  name: z.string(),
-  phone: z.string().regex(/^\d{10,12}$/),
-  line1: z.string(),
+  name: z.string().min(1, "customer.name required"),
+  phone: z.string().regex(/^\d{10,12}$/, "phone must be 10–12 digits"),
+  line1: z.string().min(3, "address line1 required"),
   line2: z.string().optional(),
-  city: z.string(),
-  state: z.string(),
-  pincode: z.string(),
+  city: z.string().min(2, "city required"),
+  state: z.string().min(2, "state required"),
+  pincode: z.string().min(4, "pincode required"),
   landmark: z.string().optional()
 });
 
 const Body = z.object({
   customer: Address,
-  items: z.array(Item).min(1),
+  items: z.array(Item).min(1, "at least 1 item"),
   notes: z.string().optional(),
-  payment_mode: z.literal("COD")
+  payment_mode: z.literal("COD", { invalid_type_error: "payment_mode must be COD" })
 });
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") return notAllowed(res);
   try {
     const parsed = Body.parse(typeof req.body === "string" ? JSON.parse(req.body) : req.body);
     const { customer, items, notes } = parsed;
@@ -54,7 +55,7 @@ export default async function handler(req, res) {
       .select()
       .limit(1);
 
-    if (addrErr) return res.status(400).json({ error: String(addrErr.message || addrErr) });
+    if (addrErr) return serverError(res, addrErr.message || String(addrErr));
     const address_id = addrIns?.[0]?.id;
 
     const subtotal = items.reduce((s, it) => s + it.price_paise * it.qty, 0);
@@ -78,7 +79,7 @@ export default async function handler(req, res) {
       notes: notes || null,
       status_timestamps: { PLACED: nowIso }
     }]);
-    if (oErr) return res.status(400).json({ error: String(oErr.message || oErr) });
+    if (oErr) return serverError(res, oErr.message || String(oErr));
 
     const rows = items.map(it => ({
       order_id: id,
@@ -90,10 +91,11 @@ export default async function handler(req, res) {
       qty: it.qty
     }));
     const { error: iErr } = await supabase.from("order_items").insert(rows);
-    if (iErr) return res.status(400).json({ error: String(iErr.message || iErr) });
+    if (iErr) return serverError(res, iErr.message || String(iErr));
 
-    return res.status(200).json({ ok: true, id, total_paise: total });
+    return ok(res, { ok: true, id, total_paise: total });
   } catch (e) {
-    return res.status(400).json({ error: String(e) });
+    if (e instanceof ZodError) return fromZodError(res, e);
+    return serverError(res, e?.message || String(e));
   }
 }
