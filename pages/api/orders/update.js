@@ -27,63 +27,84 @@ const STATUS_MAP = {
   returned:"RETURNED",
   cancelled:"CANCELLED", canceled:"CANCELLED",
 };
-const norm = s => {
+
+function normalizeStatus(s){
   if (!s || typeof s !== "string") return null;
-  const k = s.trim().toLowerCase().replace(/\s+/g," ").replace(/\s/g,"_");
-  if (STATUS_MAP[k]) return STATUS_MAP[k];
+  const key = s.trim().toLowerCase().replace(/\s+/g, " ").replace(/\s/g, "_");
+  if (STATUS_MAP[key]) return STATUS_MAP[key];
   const up = s.toUpperCase();
   return ORDER_STATUSES.includes(up) ? up : null;
-};
-const next = cur => {
-  const i = ORDER_STATUSES.indexOf(cur || "PLACED");
-  if (i < 0) return "PLACED";
-  if (["DELIVERED","RETURNED","CANCELLED"].includes(cur)) return cur;
-  return ORDER_STATUSES[i+1] || cur;
-};
-const addMinutes = (d,m) => new Date(d.getTime()+m*60000).toISOString();
+}
+function nextStatus(curr){
+  const i = ORDER_STATUSES.indexOf(curr || "PLACED");
+  if (i === -1) return "PLACED";
+  if (["DELIVERED","RETURNED","CANCELLED"].includes(curr)) return curr; // terminal
+  return ORDER_STATUSES[i+1] || curr;
+}
+const addMinutes = (d, m) => new Date(d.getTime() + m*60000).toISOString();
 
 export default async function handler(req, res) {
   try {
-    const src = req.method === "GET" ? req.query
+    const src = req.method === "GET"
+      ? req.query
       : (typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {}));
 
     const id = src.id || src.orderId || src.order_id;
     const action = typeof src.action === "string" ? src.action.toLowerCase() : null;
-    let status = norm(src.status);         // optional
+    let status = normalizeStatus(src.status); // optional
     let eta = typeof src.eta === "string" ? src.eta : undefined;
     const notes = typeof src.notes === "string" ? src.notes : undefined;
 
-    if (!id) return valErr(res, [{ path:"id", message:"id is required (accepted: id | orderId | order_id)" }]);
+    if (!id) return valErr(res, [{ path: "id", message: "id is required (accepted: id | orderId | order_id)" }]);
 
+    // Load the row (to know current status + timestamps)
     const { data: row, error: getErr } = await supabase
-      .from("orders").select("status,status_timestamps").eq("id", id).single();
+      .from("orders")
+      .select("status,status_timestamps")
+      .eq("id", id)
+      .single();
     if (getErr) return serverError(res, getErr.message || String(getErr));
 
+    const prevStatus = row?.status || "PLACED";
+
+    // Interpret button "actions" FIRST and lock them in (no auto-advance override)
+    let decidedBy = "explicit-status";
     if (!status && action) {
-      if (action === "approve") { status = "CONFIRMED"; eta = addMinutes(new Date(), 120); }
-      else if (["ofd","out_for_delivery","out for delivery"].includes(action)) {
-        status = "OUT_FOR_DELIVERY"; eta = addMinutes(new Date(), 60);
+      decidedBy = "action";
+      if (action === "approve") {           // ✅ always CONFIRMED
+        status = "CONFIRMED";
+        eta = addMinutes(new Date(), 120);
+      } else if (["ofd","out_for_delivery","out for delivery"].includes(action)) {
+        status = "OUT_FOR_DELIVERY";
+        eta = addMinutes(new Date(), 60);
+      } else {
+        return valErr(res, [{ path: "action", message: "unknown action (use 'approve' or 'ofd')" }]);
       }
     }
 
-    const newStatus = status || next(row?.status);
-    if (!ORDER_STATUSES.includes(newStatus)) {
-      return valErr(res, [{ path:"status", message:`invalid status. Allowed: ${ORDER_STATUSES.join(", ")}` }]);
+    // If still no explicit status or action, auto-advance
+    if (!status) { decidedBy = "auto-advance"; status = nextStatus(prevStatus); }
+
+    if (!ORDER_STATUSES.includes(status)) {
+      return valErr(res, [{ path: "status", message: "invalid status. Allowed: " + ORDER_STATUSES.join(", ") }]);
     }
 
     const st = row?.status_timestamps || {};
-    st[newStatus] = new Date().toISOString();
+    st[status] = new Date().toISOString();
 
-    // ✅ also bump updated_at so your table shows the change
-    const patch = { status: newStatus, status_timestamps: st, updated_at: new Date().toISOString() };
+    const patch = { status, status_timestamps: st, updated_at: new Date().toISOString() };
     if (notes !== undefined) patch.notes = notes;
-    if (eta !== undefined) patch.eta = eta;
+    if (eta   !== undefined) patch.eta   = eta;
 
-    const { data: updData, error: updErr } = await supabase
+    const { data: updated, error: updErr } = await supabase
       .from("orders").update(patch).eq("id", id).select().single();
     if (updErr) return serverError(res, updErr.message || String(updErr));
 
-    return ok(res, { ok:true, order: updData });
+    return ok(res, {
+      ok: true,
+      debug: { prevStatus, decidedBy, action: action || null, statusParam: src.status || null },
+      order: updated
+    });
   } catch (e) {
     return serverError(res, e?.message || String(e));
   }
