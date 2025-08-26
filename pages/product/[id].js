@@ -17,22 +17,23 @@ export default function ProductPage({ initial }){
     if(query.id && all.length){ setP(all.find(x=>x.id===query.id)); }
   }, [query.id, all]);
 
-  if(!p) return (
-      <>
-      <Head>
+  if(!p) return (<>
+  <Head>
         <title>{p ? p.name + ' • Maa Mobile' : 'Product • Maa Mobile'}</title>
         <meta name="description" content={p ? p.name + ' — Buy locally with delivery' : 'Local product'} />
         <meta property="og:title" content={p ? p.name : 'Product'} />
       </Head>
-      <main style={{maxWidth:1000,margin:"20px auto",padding:"0 16px"}}>Loading…</main>
+  <main style={{maxWidth:1000,margin:"20px auto",padding:"0 16px"}}>Loading…</main>
       </>
     );
 
-  return (\n    <>\n      <Head>
+  return (<>
+  <Head>
         <title>{p ? p.name + ' • Maa Mobile' : 'Product • Maa Mobile'}</title>
         <meta name="description" content={p ? p.name + ' — Buy locally with delivery' : 'Local product'} />
         <meta property="og:title" content={p ? p.name : 'Product'} />
-      </Head>\n      <main style={{maxWidth:1000, margin:"20px auto", padding:"0 16px"}}>
+      </Head>
+  <main style={{maxWidth:1000, margin:"20px auto", padding:"0 16px"}}>
       <nav style={{marginBottom:10}}><Link href="/">← Back to Home</Link></nav>
       <div style={{display:"grid", gridTemplateColumns:"420px 1fr", gap:20, alignItems:"start"}}>
         <div style={{border:"1px solid #eee", borderRadius:8, padding:10, textAlign:"center"}}>
@@ -55,7 +56,8 @@ export default function ProductPage({ initial }){
           </ul>
         </div>
       </div>
-    </main>\n    </>
+    </main>
+    </>
   );
 }
 

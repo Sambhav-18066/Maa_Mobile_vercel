@@ -27,26 +27,8 @@ export default async function handler(req, res) {
   });
 
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body
-    const nowIso = new Date().toISOString()
-    const id = body.id || ("MMA" + Math.floor(100000 + Math.random() * 900000))
-
-    const order = {
-      id,
-      name: body.name || "",
-      phone: String(body.phone || "").replace(/[^0-9]/g, ""),
-      address: body.address || "",
-      whatsapp: String(body.whatsapp || "").replace(/[^0-9]/g, ""),
-      payment: body.payment || body.pay || "COD",
-      items: body.items || [],
-      total: body.total || 0,
-      status: "PLACED",
-      status_timestamps: { PLACED: nowIso },
-      created_at: nowIso,
-      updatedAt: nowIso
-    }
-
-    // Try inserting
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+        // Try inserting
+    
     const parsed = OrderSchema.parse(body);
     const id = parsed.id || ("MMA" + Date.now());
     const order = { id, ...parsed, status: "PLACED", status_timestamps: { PLACED: new Date().toISOString() }, created_at: new Date().toISOString() };

@@ -28,8 +28,10 @@ const [all, setAll] = useState([]);
     );
   }, [all, q, cat]);
 
-  return (
-    <>\n  <Head>
+  return (<>
+
+    <>
+  <Head>
     <title>Maa Mobile — Mobiles, Electronics, LPG • 30km delivery</title>
     <meta name="description" content="Local store for mobiles, TVs, ACs, LPG. Free delivery within 30km. COD & UPI." />
     <meta property="og:title" content="Maa Mobile" />
@@ -38,8 +40,8 @@ const [all, setAll] = useState([]);
     <meta name="theme-color" content="#6a42f5" />
     <link rel="manifest" href="/manifest.json" />
   </Head>
-\n    </>
-    <>
+
+    
       <Header onSearch={setQ} onOpenCart={()=>setCartOpen(true)} />
       <nav className="nav">
         {STORE_CONFIG.CATEGORIES.map(c => (

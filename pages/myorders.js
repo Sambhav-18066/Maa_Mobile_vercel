@@ -41,8 +41,13 @@ export default function MyOrders() {
 
   const latest = orders[0];
 
-  return (\n    <>\n      <Head>\n        <title>My Orders • Maa Mobile</title>\n        <meta name=\"robots\" content=\"noindex\" />\n      </Head>\n    </>
+  return (
     <>
+      <Head>
+        <title>My Orders • Maa Mobile</title>
+        <meta name=\"robots\" content=\"noindex\" />
+      </Head>
+    
       <Head>
         <title>My Orders • Maa Mobile</title>
         <meta name="robots" content="noindex" />
