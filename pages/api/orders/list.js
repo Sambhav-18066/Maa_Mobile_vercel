@@ -7,7 +7,6 @@ if (!supabaseUrl) throw new Error("ENV NEXT_PUBLIC_SUPABASE_URL missing");
 if (!serviceKey)  throw new Error("ENV SUPABASE_SERVICE_ROLE missing");
 const supabase = createClient(supabaseUrl, serviceKey);
 
-// tiny response helpers
 function send(res, status, data) {
   res.statusCode = status;
   res.setHeader("content-type", "application/json");
@@ -18,7 +17,6 @@ const serverError = (res, message) => send(res, 500, { code: "SERVER_ERROR", mes
 
 export default async function handler(req, res) {
   try {
-    // Accept both GET (query) and POST (body)
     const src = req.method === "GET"
       ? req.query
       : (typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {}));
@@ -28,33 +26,37 @@ export default async function handler(req, res) {
     let limit = parseInt(src.limit, 10);
     limit = Number.isFinite(limit) ? Math.min(Math.max(limit, 1), 200) : 50;
 
-    // Join address and items
+    // include related data
     const selectCols = `
       id,status,payment_status,subtotal_paise,discount_paise,shipping_paise,total_paise,created_at,status_timestamps,
       address:address_id ( id, name, phone, line1, city, state, pincode ),
       items:order_items ( id, name_snapshot, qty, price_paise, image_url )
     `;
 
-    let q = supabase
-      .from("orders")
-      .select(selectCols)
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
+    let q = supabase.from("orders").select(selectCols).order("created_at", { ascending: false }).limit(limit);
     if (status) q = q.eq("status", status);
     if (before) q = q.lt("created_at", before);
 
     const { data, error } = await q;
     if (error) return serverError(res, error.message || String(error));
 
-    // Provide flat fields for easy rendering
     const hydrated = (data || []).map(o => {
       const itemCount = Array.isArray(o.items) ? o.items.reduce((s,i)=>s + (i.qty||0), 0) : 0;
+
+      // format a back-compat address string
+      const addr = o.address || {};
+      const cityStatePin = [addr.city, addr.state, addr.pincode].filter(Boolean).join(", ");
+      const address_text = [addr.line1, cityStatePin].filter(Boolean).join(" — ");
+
       return {
+        // keep everything…
         ...o,
-        address_name:  o.address?.name  || null,
-        address_phone: o.address?.phone || null,
-        address_line1: o.address?.line1 || null,
+        // …but overwrite "address" to be a STRING (back-compat so React won't crash)
+        address: address_text || "",
+        // also expose flat fields for modern UIs
+        address_name:  addr.name  || null,
+        address_phone: addr.phone || null,
+        address_line1: addr.line1 || null,
         item_count: itemCount,
         total_rupees: typeof o.total_paise === "number" ? (o.total_paise / 100) : null
       };
