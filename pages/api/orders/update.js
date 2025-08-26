@@ -1,21 +1,7 @@
-// pages/api/orders/update.js
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey  = process.env.SUPABASE_SERVICE_ROLE;
-if (!supabaseUrl) throw new Error("ENV NEXT_PUBLIC_SUPABASE_URL missing");
-if (!serviceKey)  throw new Error("ENV SUPABASE_SERVICE_ROLE missing");
-const supabase = createClient(supabaseUrl, serviceKey);
-
-function send(res, status, data) {
-  res.statusCode = status;
-  res.setHeader("content-type", "application/json");
-  res.setHeader("cache-control", "no-store, max-age=0, must-revalidate");
-  res.end(JSON.stringify(data));
-}
-const ok = (res, data) => send(res, 200, data);
-const valErr = (res, issues) => send(res, 422, { code: "VALIDATION_ERROR", issues });
-const serverError = (res, message) => send(res, 500, { code: "SERVER_ERROR", message });
+// pages/api/admin/orders/update.js
+import { getAdminSupabase } from "../../../../lib/supabaseAdmin";
+import { requireAdminKey, json } from "../../../../lib/adminAuth";
+import { hydrateRow } from "../../../../lib/hydrateOrders";
 
 const ORDER_STATUSES = ["PLACED","CONFIRMED","PACKED","OUT_FOR_DELIVERY","DELIVERED","RETURNED","CANCELLED"];
 const STATUS_MAP = {
@@ -27,66 +13,73 @@ const STATUS_MAP = {
   returned:"RETURNED",
   cancelled:"CANCELLED", canceled:"CANCELLED",
 };
-
-function normalizeStatus(s){
+const norm = s => {
   if (!s || typeof s !== "string") return null;
-  const key = s.trim().toLowerCase().replace(/\s+/g, " ").replace(/\s/g, "_");
-  if (STATUS_MAP[key]) return STATUS_MAP[key];
+  const k = s.trim().toLowerCase().replace(/\s+/g," ").replace(/\s/g,"_");
+  if (STATUS_MAP[k]) return STATUS_MAP[k];
   const up = s.toUpperCase();
   return ORDER_STATUSES.includes(up) ? up : null;
-}
-function nextStatus(curr){
-  const i = ORDER_STATUSES.indexOf(curr || "PLACED");
-  if (i === -1) return "PLACED";
-  if (["DELIVERED","RETURNED","CANCELLED"].includes(curr)) return curr; // terminal
-  return ORDER_STATUSES[i+1] || curr;
-}
-const addMinutes = (d, m) => new Date(d.getTime() + m*60000).toISOString();
+};
+const next = cur => {
+  const i = ORDER_STATUSES.indexOf(cur || "PLACED");
+  if (i < 0) return "PLACED";
+  if (["DELIVERED","RETURNED","CANCELLED"].includes(cur)) return cur;
+  return ORDER_STATUSES[i+1] || cur;
+};
+const addMinutes = (d,m) => new Date(d.getTime()+m*60000).toISOString();
 
 export default async function handler(req, res) {
+  if (!requireAdminKey(req, res)) return;
   try {
-    const src = req.method === "GET"
-      ? req.query
+    const src = req.method === "GET" ? req.query
       : (typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {}));
 
     const id = src.id || src.orderId || src.order_id;
-    const action = typeof src.action === "string" ? src.action.toLowerCase() : null;
-    let status = normalizeStatus(src.status); // optional
+    let { action } = src;
+    const statusParam = src.status;
+
+    // accept misuse: status=approve/ofd/... acts like action
+    if (!action && typeof statusParam === "string") {
+      const s = statusParam.trim().toLowerCase();
+      if (["approve","ofd","delivered","cancelled","canceled","returned","packed","confirm","confirmed"].includes(s)) action = s;
+    }
+
+    let status = norm(statusParam);
     let eta = typeof src.eta === "string" ? src.eta : undefined;
     const notes = typeof src.notes === "string" ? src.notes : undefined;
 
-    if (!id) return valErr(res, [{ path: "id", message: "id is required (accepted: id | orderId | order_id)" }]);
+    if (!id) return json(res, 422, { code: "VALIDATION_ERROR", issues:[{ path:"id", message:"id (or orderId/order_id) required" }]});
 
-    // Load the row (to know current status + timestamps)
-    const { data: row, error: getErr } = await supabase
-      .from("orders")
-      .select("status,status_timestamps")
-      .eq("id", id)
-      .single();
-    if (getErr) return serverError(res, getErr.message || String(getErr));
+    const supabase = getAdminSupabase();
+    const { data: row, error: getErr } = await supabase.from("orders")
+      .select("status,status_timestamps").eq("id", id).single();
+    if (getErr) return json(res, 500, { code: "SERVER_ERROR", message: getErr.message });
 
     const prevStatus = row?.status || "PLACED";
 
-    // Interpret button "actions" FIRST and lock them in (no auto-advance override)
-    let decidedBy = "explicit-status";
+    // Recognize more actions
     if (!status && action) {
-      decidedBy = "action";
-      if (action === "approve") {           // ✅ always CONFIRMED
-        status = "CONFIRMED";
-        eta = addMinutes(new Date(), 120);
-      } else if (["ofd","out_for_delivery","out for delivery"].includes(action)) {
-        status = "OUT_FOR_DELIVERY";
-        eta = addMinutes(new Date(), 60);
+      const a = String(action).toLowerCase();
+      if (a === "approve" || a === "confirm" || a === "confirmed") {
+        status = "CONFIRMED"; eta = addMinutes(new Date(), 120);
+      } else if (a === "packed" || a === "pack") {
+        status = "PACKED";
+      } else if (a === "ofd" || a === "out_for_delivery" || a === "out for delivery") {
+        status = "OUT_FOR_DELIVERY"; eta = addMinutes(new Date(), 60);
+      } else if (a === "delivered") {
+        status = "DELIVERED";
+      } else if (a === "cancelled" || a === "canceled") {
+        status = "CANCELLED";
+      } else if (a === "returned") {
+        status = "RETURNED";
       } else {
-        return valErr(res, [{ path: "action", message: "unknown action (use 'approve' or 'ofd')" }]);
+        return json(res, 422, { code:"VALIDATION_ERROR", issues:[{ path:"action", message:"unknown action" }] });
       }
     }
 
-    // If still no explicit status or action, auto-advance
-    if (!status) { decidedBy = "auto-advance"; status = nextStatus(prevStatus); }
-
+    if (!status) status = next(prevStatus);
     if (!ORDER_STATUSES.includes(status)) {
-      return valErr(res, [{ path: "status", message: "invalid status. Allowed: " + ORDER_STATUSES.join(", ") }]);
+      return json(res, 422, { code: "VALIDATION_ERROR", issues:[{ path:"status", message:`invalid status (${ORDER_STATUSES.join(", ")})` }]});
     }
 
     const st = row?.status_timestamps || {};
@@ -94,18 +87,23 @@ export default async function handler(req, res) {
 
     const patch = { status, status_timestamps: st, updated_at: new Date().toISOString() };
     if (notes !== undefined) patch.notes = notes;
-    if (eta   !== undefined) patch.eta   = eta;
+    if (eta !== undefined)   patch.eta = eta; // only if you added the eta column
 
-    const { data: updated, error: updErr } = await supabase
-      .from("orders").update(patch).eq("id", id).select().single();
-    if (updErr) return serverError(res, updErr.message || String(updErr));
+    const { data: upd, error: updErr } = await supabase.from("orders")
+      .update(patch).eq("id", id).select(`
+        id,created_at,status,status_timestamps,user_id,address_id,payment_status,
+        subtotal_paise,discount_paise,shipping_paise,total_paise,notes,updated_at,
+        address:address_id ( name, phone, line1, city, state, pincode ),
+        items:order_items ( qty, price_paise )
+      `).single();
+    if (updErr) return json(res, 500, { code:"SERVER_ERROR", message: updErr.message });
 
-    return ok(res, {
-      ok: true,
-      debug: { prevStatus, decidedBy, action: action || null, statusParam: src.status || null },
-      order: updated
+    return json(res, 200, {
+      ok:true,
+      order: hydrateRow(upd),
+      debug:{ prevStatus, decidedBy: action ? "action" : (statusParam ? "explicit-status" : "auto-advance"), action: action || null, statusParam: statusParam || null }
     });
   } catch (e) {
-    return serverError(res, e?.message || String(e));
+    return json(res, 500, { code: "SERVER_ERROR", message: e?.message || String(e) });
   }
 }
