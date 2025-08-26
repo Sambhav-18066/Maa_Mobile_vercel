@@ -1,5 +1,5 @@
 
-import { supabaseAdmin as supabase } from "@/lib/server/supabaseAdmin"
+import { supabase } from "@/lib/supabase"
 
 export default async function handler(req, res) {
   if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
