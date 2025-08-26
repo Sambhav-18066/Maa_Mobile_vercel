@@ -45,14 +45,10 @@ export default function MyOrders() {
     <>
       <Head>
         <title>My Orders • Maa Mobile</title>
-        <meta name=\"robots\" content=\"noindex\" />
-      </Head>
-    
-      <Head>
-        <title>My Orders • Maa Mobile</title>
         <meta name="robots" content="noindex" />
       </Head>
-      <main style={{maxWidth: 1000, margin:"16px auto", padding:"0 16px", display:"grid", gap:16}}>
+
+    <main style={{maxWidth: 1000, margin:"16px auto", padding:"0 16px", display:"grid", gap:16}}>
       <header className="header">
         <div className="bar">
           <div className="logo"><img src="/assets/logo.svg" width="36" height="36" alt="logo"/><div className="title">My Orders</div></div>
@@ -118,5 +114,6 @@ export default function MyOrders() {
       {!loading && orders.length===0 && phone && <div className="small">No orders found for this number.</div>}
     </main>
     </>
+
   );
 }

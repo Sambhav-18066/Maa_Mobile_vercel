@@ -11,9 +11,8 @@ export default async function handler(req, res) {
   if (!allow(ip)) return res.status(429).json({ error: "Too many requests" })
 
   try {
-    const PhoneSchema = z.object({ phone: z.string().regex(/^\d{10,12}$/) });
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const { phone } = PhoneSchema.parse(body)
+    const { phone } = z.object({ phone: z.string().regex(/^\d{10,12}$/) }).parse(body)
     if (!phone) return res.status(400).json({ error: "Phone required" })
 
     const { data, error } = await supabase

@@ -29,7 +29,7 @@ create table orders (
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR.supabase.co
-SUPABASE_SERVICE_ROLE=your-service-role-key
+SUPABASE_KEY=your-service-role-key
 ADMIN_KEY=your-admin-password
 ```
 

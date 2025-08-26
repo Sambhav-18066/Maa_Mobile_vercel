@@ -8,14 +8,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" })
 
   try {
-    const PatchSchema = z.object({
-      id: z.string(),
-      patch: z.object({
-        status: z.enum(["PLACED","APPROVED","OUT_FOR_DELIVERY","DELIVERED"]).optional(),
-        eta: z.string().optional(),
-        notes: z.string().optional()
-      })
-    });
+    const PatchSchema = z.object({ id: z.string(), patch: z.object({ status: z.enum(["PLACED","APPROVED","OUT_FOR_DELIVERY","DELIVERED"]).optional(), eta: z.string().optional(), notes: z.string().optional() }) });
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     const { id, patch } = PatchSchema.parse(body)
     if(!id) return res.status(400).json({ error: "Missing order id" });
