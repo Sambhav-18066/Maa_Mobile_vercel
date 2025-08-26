@@ -7,25 +7,27 @@ if (!supabaseUrl) throw new Error("ENV NEXT_PUBLIC_SUPABASE_URL missing");
 if (!serviceKey)  throw new Error("ENV SUPABASE_SERVICE_ROLE missing");
 const supabase = createClient(supabaseUrl, serviceKey);
 
-// Tiny helpers so responses are explicit
 function send(res, status, data) {
   res.statusCode = status;
   res.setHeader("content-type", "application/json");
   res.end(JSON.stringify(data));
 }
 const ok = (res, data) => send(res, 200, data);
-const notAllowed = (res) => send(res, 405, { code: "METHOD_NOT_ALLOWED" });
 const serverError = (res, message) => send(res, 500, { code: "SERVER_ERROR", message });
 const validationError = (res, issues) => send(res, 422, { code: "VALIDATION_ERROR", issues });
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return notAllowed(res);
-
   try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
-    const status = typeof body.status === "string" ? body.status : undefined;
-    const limit  = Number.isInteger(body.limit) ? Math.min(Math.max(body.limit, 1), 200) : 50;
-    const before = typeof body.before === "string" ? body.before : undefined;
+    // Accept both GET (req.query) and POST (req.body)
+    const src = req.method === "GET"
+      ? req.query
+      : (typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {}));
+
+    const status = typeof src.status === "string" ? src.status : undefined;
+    const before = typeof src.before === "string" ? src.before : undefined;
+
+    let limit = parseInt(src.limit, 10);
+    limit = Number.isFinite(limit) ? Math.min(Math.max(limit, 1), 200) : 50;
 
     let q = supabase
       .from("orders")
