@@ -2,36 +2,23 @@
 "use client";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import Head from "next/head";
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/context/CartContext";
 
-export default function ProductPage({ initial }){
+export default function ProductPage(){
   const { query } = useRouter();
   const { add } = useCart();
-  const [all, setAll] = useState(initial ? [initial] : []);
-  const [p, setP] = useState(initial || null);
+  const [all, setAll] = useState([]);
+  const [p, setP] = useState(null);
 
-  useEffect(()=>{ if(!initial){ fetch("/products.json").then(r=>r.json()).then(setAll); } }, [initial]);
+  useEffect(()=>{ fetch("/products.json").then(r=>r.json()).then(setAll); }, []);
   useEffect(()=>{
     if(query.id && all.length){ setP(all.find(x=>x.id===query.id)); }
   }, [query.id, all]);
 
-  if(!p) return (
-    <>
-      <Head>
-        <title>Product • Maa Mobile</title>
-      </Head>
-      <main style={{maxWidth:1000,margin:"20px auto",padding:"0 16px"}}>Loading…</main>;
+  if(!p) return <main style={{maxWidth:1000,margin:"20px auto",padding:"0 16px"}}>Loading…</main>;
 
   return (
-    <>
-      <Head>
-        <title>{p ? p.name + ' • Maa Mobile' : 'Product • Maa Mobile'}</title>
-        <meta name="description" content={p ? p.name + ' — Buy locally with delivery' : 'Local product'} />
-        <meta property="og:title" content={p ? p.name : 'Product'} />
-      </Head>
-
     <main style={{maxWidth:1000, margin:"20px auto", padding:"0 16px"}}>
       <nav style={{marginBottom:10}}><Link href="/">← Back to Home</Link></nav>
       <div style={{display:"grid", gridTemplateColumns:"420px 1fr", gap:20, alignItems:"start"}}>
@@ -56,17 +43,5 @@ export default function ProductPage({ initial }){
         </div>
       </div>
     </main>
-    </>
-
   );
-}
-
-export async function getStaticPaths(){
-  const products = require("../../public/products.json");
-  return { paths: products.map(p => ({ params: { id: p.id } })), fallback: false };
-}
-export async function getStaticProps({ params }){
-  const products = require("../../public/products.json");
-  const initial = products.find(p => p.id === params.id) || null;
-  return { props: { initial } };
 }

@@ -1,5 +1,4 @@
 "use client";
-import Head from "next/head";
 import { useEffect, useState } from "react";
 import OrderTimeline from "@/components/OrderTimeline";
 
@@ -42,12 +41,6 @@ export default function MyOrders() {
   const latest = orders[0];
 
   return (
-    <>
-      <Head>
-        <title>My Orders • Maa Mobile</title>
-        <meta name="robots" content="noindex" />
-      </Head>
-
     <main style={{maxWidth: 1000, margin:"16px auto", padding:"0 16px", display:"grid", gap:16}}>
       <header className="header">
         <div className="bar">
@@ -113,7 +106,5 @@ export default function MyOrders() {
 
       {!loading && orders.length===0 && phone && <div className="small">No orders found for this number.</div>}
     </main>
-    </>
-
   );
 }

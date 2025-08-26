@@ -7,7 +7,6 @@ import STORE_CONFIG from "@/lib/storeConfig";
 import HeroCarousel from "@/components/HeroCarousel";
 import DealsBanner from "@/components/DealsBanner";
 import ProductRow from "@/components/ProductRow";
-import Head from "next/head";
 
 export default function Home(){
   const [all, setAll] = useState([]);
@@ -29,17 +28,6 @@ export default function Home(){
   }, [all, q, cat]);
 
   return (
-    <>
-      <Head>
-        <title>Maa Mobile — Mobiles, Electronics, LPG • 30km delivery</title>
-        <meta name="description" content="Local store for mobiles, TVs, ACs, LPG. Free delivery within 30km. COD & UPI." />
-        <meta property="og:title" content="Maa Mobile" />
-        <meta property="og:description" content="Local electronics + LPG with fast delivery." />
-        <meta property="og:image" content="/assets/hero-mobiles.svg" />
-        <meta name="theme-color" content="#6a42f5" />
-        <link rel="manifest" href="/manifest.json" />
-      </Head>
-
     <>
       <Header onSearch={setQ} onOpenCart={()=>setCartOpen(true)} />
       <nav className="nav">
