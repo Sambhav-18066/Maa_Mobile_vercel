@@ -19,12 +19,12 @@ const serverError = (res, message) => send(res, 500, { code: "SERVER_ERROR", mes
 const ORDER_STATUSES = ["PLACED","CONFIRMED","PACKED","OUT_FOR_DELIVERY","DELIVERED","RETURNED","CANCELLED"];
 const STATUS_MAP = {
   "placed":"PLACED",
-  "confirm":"CONFIRMED","confirmed":"CONFIRMED",
+  "confirm":"CONFIRMED","confirmed":"CONFIRMED","approve":"CONFIRMED",
   "pack":"PACKED","packed":"PACKED",
   "ofd":"OUT_FOR_DELIVERY","out for delivery":"OUT_FOR_DELIVERY","out_for_delivery":"OUT_FOR_DELIVERY",
   "delivered":"DELIVERED",
   "returned":"RETURNED",
-  "cancelled":"CANCELLED","canceled":"CANCELLED",
+  "cancelled":"CANCELLED","canceled":"CANCELLED"
 };
 
 function normalizeStatus(s){
@@ -34,12 +34,14 @@ function normalizeStatus(s){
   const up = s.toUpperCase();
   return ORDER_STATUSES.includes(up) ? up : null;
 }
-
 function nextStatus(curr){
   const i = ORDER_STATUSES.indexOf(curr || "PLACED");
   if (i === -1) return "PLACED";
-  if (["DELIVERED","RETURNED","CANCELLED"].includes(curr)) return curr; // terminal
+  if (["DELIVERED","RETURNED","CANCELLED"].includes(curr)) return curr;
   return ORDER_STATUSES[i+1] || curr;
+}
+function addMinutes(dt, min) {
+  return new Date(dt.getTime() + min * 60000).toISOString();
 }
 
 export default async function handler(req, res) {
@@ -48,17 +50,17 @@ export default async function handler(req, res) {
       ? req.query
       : (typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {}));
 
-    // Accept id in ANY common shape
     const id = src.id || src.orderId || src.order_id;
-    let status = normalizeStatus(src.status);  // optional → we auto-advance if missing
+    const action = typeof src.action === "string" ? src.action.toLowerCase() : null;
+    let status = normalizeStatus(src.status); // optional
+    let eta = typeof src.eta === "string" ? src.eta : undefined;
     const notes = typeof src.notes === "string" ? src.notes : undefined;
-    const eta   = typeof src.eta === "string" ? src.eta   : undefined;
 
     if (!id) {
-      return valErr(res, [{ path: "id", message: "id is required (accepted keys: id | orderId | order_id)" }]);
+      return valErr(res, [{ path: "id", message: "id is required (accepted: id | orderId | order_id)" }]);
     }
 
-    // Fetch current status/timestamps
+    // Fetch current state
     const { data: row, error: getErr } = await supabase
       .from("orders")
       .select("status,status_timestamps")
@@ -66,7 +68,18 @@ export default async function handler(req, res) {
       .single();
     if (getErr) return serverError(res, getErr.message || String(getErr));
 
-    // If no explicit status, auto-advance
+    // Interpret high-level actions used by buttons
+    if (!status && action) {
+      if (action === "approve") {            // Approve (+2h)
+        status = "CONFIRMED";
+        eta = addMinutes(new Date(), 120);
+      } else if (action === "ofd" || action === "out_for_delivery" || action === "out for delivery") {
+        status = "OUT_FOR_DELIVERY";         // Out for delivery (+1h)
+        eta = addMinutes(new Date(), 60);
+      }
+    }
+
+    // If still no explicit status, auto-advance
     const newStatus = status || nextStatus(row?.status);
     if (!ORDER_STATUSES.includes(newStatus)) {
       return valErr(res, [{ path: "status", message: "invalid status. Allowed: " + ORDER_STATUSES.join(", ") }]);
@@ -82,7 +95,7 @@ export default async function handler(req, res) {
     const { error: updErr } = await supabase.from("orders").update(patch).eq("id", id);
     if (updErr) return serverError(res, updErr.message || String(updErr));
 
-    return ok(res, { ok: true, id, status: newStatus, status_timestamps: st });
+    return ok(res, { ok: true, id, status: newStatus, eta, status_timestamps: st });
   } catch (e) {
     return serverError(res, e?.message || String(e));
   }
