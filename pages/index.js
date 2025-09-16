@@ -10,13 +10,12 @@ import ProductRow from "@/components/ProductRow";
 
 export default function Home(){
   const [all, setAll] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
   const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(()=>{
-    fetch("/products.json").then(r=>r.json()).then(d=>{ setAll(d); setLoading(false); });
+    fetch("/products.json").then(r=>r.json()).then(setAll);
   }, []);
 
   const list = useMemo(()=>{

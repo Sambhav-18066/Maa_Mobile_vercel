@@ -20,7 +20,7 @@ export default function Header({ onSearch, onOpenCart }){
           <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search for mobiles, TVs, ACs, LPG…"/>
           <button onClick={()=>onSearch?.(q)}>Search</button>
         </div>
-        <div className="actions"><button id="a2hs" className="badge" style={{display:"none"}} onClick={()=>window.__maa_a2hs?.()}>Add to Home</button>
+        <div className="actions">
           <button className="badge" onClick={onOpenCart}>
             🛒 Cart <span className="count">{count}</span>
           </button>
@@ -29,17 +29,6 @@ export default function Header({ onSearch, onOpenCart }){
         </div>
       </div>
       <nav className="nav" id="categoryNav"></nav>
-    
-        <script dangerouslySetInnerHTML={{__html:`
-          (function(){
-            let deferredPrompt;
-            window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; 
-              const btn = document.getElementById('a2hs'); if (btn) btn.style.display='inline-flex';
-            });
-            window.__maa_a2hs = function(){ if (deferredPrompt){ deferredPrompt.prompt(); deferredPrompt.userChoice.finally(()=>{ const btn = document.getElementById('a2hs'); if (btn) btn.style.display='none'; deferredPrompt=null; }); } };
-          })();
-        `}} />
-        </header>
-        
+    </header>
   );
 }

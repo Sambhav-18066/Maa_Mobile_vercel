@@ -8,10 +8,3 @@
 3) In Supabase SQL Editor, run `supabase/schema.sql` from this repo.
 4) Deploy. Open `/admin` → enter your `ADMIN_KEY` once. You can see, filter, and update orders & ETA.
 5) Customers can check `/myorders`, enter their phone, and see live status with timestamps and expected delivery.
-
-
-### COD-only endpoints added
-- POST /api/checkout/create-order (new)
-- POST /api/orders/create (back-compat adapter)
-- POST /api/orders/byPhone (address-based)
-- POST /api/orders/update

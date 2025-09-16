@@ -18,7 +18,7 @@ export default function ProductCard({ p }){
 
   return (
     <Link href={`/product/${p.id}`} className="card" style={{textDecoration:"none", color:"inherit", cursor:"pointer"}}>
-      <img src={p.image} alt={p.name} loading="lazy" />
+      <img src={p.image} alt={p.name} />
       <div className="title">{p.name}</div>
       <div className="rating">★ {Number(p.rating).toFixed(1)}</div>
       <div className="price">
